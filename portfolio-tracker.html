@@ -1,0 +1,3849 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>每日持仓记录</title>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#ffffff; --text:#16181d; --muted:#6b7280; --line:#e6e8ec;
+  --primary:#2563eb; --primary-soft:#e8efff;
+  --up:#e5484d; --down:#12a150; --flat:#6b7280; --warn:#b7791f;
+  --c1:#2563eb; --c2:#8b5cf6; --c3:#6b7280; --c4:#f59e0b;
+  --shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 24px -12px rgba(16,24,40,.18);
+  --radius:14px;
+}
+html[data-theme="dark"]{
+  --bg:#0f1115; --card:#171a21; --text:#e7e9ee; --muted:#9aa1ad; --line:#262a33;
+  --primary:#5b8cff; --primary-soft:#1b2540;
+  --up:#ff5d62; --down:#2ecc71; --flat:#9aa1ad; --warn:#e3a94d;
+  --c1:#5b8cff; --c2:#a78bfa; --c3:#9aa1ad; --c4:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px -16px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased; padding-bottom:40px;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:0 16px}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)} .warnc{color:var(--warn)}
+.mono{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+
+header{background:var(--card)}
+.head-top{display:flex; align-items:center; gap:12px; padding:14px 0 10px}
+.brand{font-size:17px; font-weight:700; letter-spacing:.2px}
+.brand small{display:block; font-weight:400; font-size:11px; color:var(--muted); letter-spacing:0}
+.head-actions{margin-left:auto; display:flex; gap:8px}
+.iconbtn{border:1px solid var(--line); background:transparent; color:var(--text); height:34px; padding:0 12px; border-radius:9px; cursor:pointer; font-size:13px; white-space:nowrap}
+.iconbtn:hover{border-color:var(--primary); color:var(--primary)}
+.summary{display:grid; grid-template-columns:repeat(auto-fit,minmax(134px,1fr)); gap:10px; padding:4px 0 14px}
+.sum-card{background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:10px 12px}
+.sum-card .k{font-size:11px; color:var(--muted); margin-bottom:4px}
+.sum-card .v{font-size:16px; font-weight:700}
+.sum-card .s{font-size:11px; margin-top:2px}
+.sum-card.hl{background:var(--primary-soft); border-color:transparent}
+
+.tabbar{background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20}
+.tabs{display:flex; gap:4px; padding:0 0 10px; overflow-x:auto}
+.tab{border:0; background:transparent; color:var(--muted); font-size:14px; font-weight:500; padding:8px 14px; border-radius:999px; cursor:pointer; white-space:nowrap}
+.tab.active{background:var(--primary-soft); color:var(--primary); font-weight:700}
+.log-filters{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.log-filters select,.log-filters input{border:1px solid var(--line); background:var(--card); color:var(--text);
+  border-radius:9px; padding:7px 11px; font-size:13px; font-family:inherit; min-height:34px}
+.log-filters input[type=search]{flex:1; min-width:170px}
+.logtag{display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; white-space:nowrap;
+  border:1px solid var(--line); background:var(--bg); color:var(--muted)}
+.log-trade{color:var(--up)} .log-flow{color:var(--primary)} .log-div{color:var(--warn)}
+.log-holding{color:var(--c2)} .log-sync{color:var(--primary)} .log-data{color:var(--text)}
+
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px}
+.card-head{display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap}
+.card-head h2{margin:0; font-size:15px; font-weight:700}
+.card-head .sp{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.btn{border:1px solid var(--line); background:var(--card); color:var(--text); padding:7px 13px; border-radius:9px; cursor:pointer; font-size:13px; white-space:nowrap}
+.btn:hover{border-color:var(--primary); color:var(--primary)}
+.btn.primary{background:var(--primary); border-color:var(--primary); color:#fff}
+.btn.primary:hover{filter:brightness(1.08); color:#fff}
+.btn.buy{background:var(--up); border-color:var(--up); color:#fff}
+.btn.sell{background:var(--down); border-color:var(--down); color:#fff}
+.btn.danger:hover{border-color:var(--up); color:var(--up)}
+.btn:disabled{opacity:.5; cursor:not-allowed}
+.btn.sm{padding:4px 9px; font-size:12px; border-radius:7px}
+input,select{font:inherit; color:var(--text); background:var(--card); border:1px solid var(--line); border-radius:9px; padding:7px 10px; width:100%}
+input:focus,select:focus{outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft)}
+input[type=date]{width:auto}
+input[type=checkbox]{width:auto}
+
+.tblwrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:660px}
+th,td{padding:9px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
+th{font-size:12px; color:var(--muted); font-weight:500; position:sticky; top:0; background:var(--card)}
+th:first-child,td:first-child{text-align:left}
+tbody tr:hover{background:var(--primary-soft)}
+tbody tr:last-child td{border-bottom:0}
+.tfoot td{font-weight:700; border-top:2px solid var(--line); border-bottom:0}
+.name-cell{display:flex; flex-direction:column; gap:1px}
+.name-cell b{font-weight:600}
+.name-cell span{font-size:11px; color:var(--muted)}
+.tag{display:inline-block; font-size:11px; padding:1px 7px; border-radius:999px; background:var(--primary-soft); color:var(--primary); margin-left:6px; font-weight:400}
+.tag.stock{background:rgba(37,99,235,.12); color:var(--primary)}
+.tag.fund{background:rgba(18,161,80,.14); color:var(--down)}
+.tag.index{background:rgba(183,121,31,.16); color:var(--warn)}
+.tag.other{background:rgba(107,114,128,.15); color:var(--muted)}
+.tag.buy{background:rgba(229,72,77,.14); color:var(--up); margin-left:0}
+.tag.sell{background:rgba(18,161,80,.14); color:var(--down); margin-left:0}
+.tag.in{background:rgba(37,99,235,.13); color:var(--primary); margin-left:0}
+.tag.out{background:rgba(183,121,31,.16); color:var(--warn); margin-left:0}
+.empty{text-align:center; color:var(--muted); padding:26px 10px}
+.empty p{margin:6px 0 14px}
+input.price{padding:5px 8px; font-size:13px; text-align:right; min-width:92px}
+
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.seg button{border:0; background:var(--card); color:var(--muted); padding:7px 18px; cursor:pointer; font-size:13px; font-weight:600}
+.seg button.on[data-side=buy]{background:var(--up); color:#fff}
+.seg button.on[data-side=sell]{background:var(--down); color:#fff}
+.seg button.on[data-side=in]{background:var(--primary); color:#fff}
+.seg button.on[data-side=out]{background:var(--warn); color:#fff}
+.chip{border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:999px; padding:4px 11px; font-size:12px; cursor:pointer; white-space:nowrap}
+.chip:hover{border-color:var(--primary); color:var(--primary)}
+.chip.on{border-color:var(--primary); color:var(--primary); background:var(--primary-soft); font-weight:600}
+.calwrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
+.cal{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; min-width:440px}
+.cal .h{font-size:11px; color:var(--muted); text-align:center; padding:2px 0}
+.cal .cell{border:1px solid var(--line); border-radius:8px; padding:5px 6px; min-height:52px; font-size:11px; color:var(--muted); line-height:1.35}
+.cal .cell.void{border-style:dashed; opacity:.4}
+.cal .cell .d{font-size:12px; font-weight:600; color:var(--text)}
+.cal .cell .p{margin-top:2px; font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; white-space:nowrap}
+.cal .cell .f{margin-top:1px; font-size:10px; opacity:.85}
+.seg.mini button{padding:5px 12px; font-size:12px}
+.bench-swatch{display:inline-block; width:14px; height:3px; border-radius:2px; vertical-align:middle}
+
+.chart-wrap{position:relative; width:100%; height:320px}
+canvas{display:block}
+.tip{position:absolute; pointer-events:none; background:var(--text); color:var(--card); font-size:12px; padding:8px 11px; border-radius:8px; transform:translate(-50%,-115%); white-space:nowrap; opacity:0; transition:opacity .1s; z-index:5; line-height:1.6}
+.legend{display:flex; gap:8px; font-size:12px; color:var(--muted); margin-top:10px; flex-wrap:wrap}
+.lg{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:999px; padding:3px 11px; cursor:pointer; user-select:none}
+.lg i{display:inline-block; width:14px; height:3px; border-radius:2px}
+.lg.off{opacity:.4; text-decoration:line-through}
+
+.modal{position:fixed; inset:0; background:rgba(12,14,18,.5); display:flex; align-items:flex-start; justify-content:center; padding:16px; z-index:50; overflow:auto}
+.modal[hidden]{display:none}
+.modal-card{background:var(--card); border-radius:16px; padding:20px; width:100%; max-width:440px; box-shadow:var(--shadow); margin:auto 0}
+.modal-card h3{margin:0 0 14px; font-size:16px}
+.field{margin-bottom:12px}
+.field label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.modal-foot{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
+.hint{font-size:12px; color:var(--muted); line-height:1.7}
+.row-inline{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+
+.ac-wrap{position:relative}
+.ac-list{position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--card); border:1px solid var(--line); border-radius:11px; box-shadow:var(--shadow); max-height:264px; overflow:auto; z-index:60}
+.ac-list[hidden]{display:none}
+.ac-item{padding:8px 12px; cursor:pointer; display:flex; gap:10px; align-items:center; font-size:13px; border-bottom:1px solid var(--line)}
+.ac-item:last-child{border-bottom:0}
+.ac-item:hover,.ac-item.on{background:var(--primary-soft)}
+.ac-item .n{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ac-item .c{color:var(--muted); font-size:12px}
+.ac-item .m{font-size:11px; color:var(--muted); background:var(--bg); border-radius:5px; padding:1px 6px}
+.ac-note{padding:9px 12px; color:var(--muted); font-size:12.5px}
+.pick{display:inline-flex; align-items:center; gap:6px; background:var(--primary-soft); color:var(--primary); border-radius:999px; padding:3px 10px; font-size:12px}
+
+#toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); background:var(--text); color:var(--card); padding:10px 18px; border-radius:11px; font-size:13px; opacity:0; transition:.22s; pointer-events:none; z-index:99; max-width:88vw; text-align:center}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+.banner{background:#fff4e5; color:#8a5300; border:1px solid #ffd9a8; padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:12px}
+html[data-theme="dark"] .banner{background:#3a2c12; color:#ffd08a; border-color:#5c451c}
+.spin{display:inline-block; width:11px; height:11px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:sp .7s linear infinite; vertical-align:-1px; margin-right:5px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.dirty{color:var(--warn); font-weight:600}
+
+@media (max-width:900px){ .summary{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:720px){
+  .summary{grid-template-columns:1fr 1fr}
+  .head-top{flex-wrap:wrap}
+  .card{padding:13px}
+  table{font-size:13px; min-width:580px}
+  th,td{padding:8px 8px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="head-top">
+      <div class="brand">每日持仓记录<small id="head-date">—</small></div>
+      <div class="head-actions"><button class="iconbtn" id="btn-theme">🌙 深色</button></div>
+    </div>
+    <div class="summary" id="summary"></div>
+  </div>
+</header>
+
+<div class="tabbar">
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab" data-tab="daily">每日记录</button>
+      <button class="tab" data-tab="holdings">持仓管理</button>
+      <button class="tab" data-tab="trend">趋势与历史</button>
+      <button class="tab" data-tab="data">数据备份</button>
+      <button class="tab" data-tab="log">操作日志</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="store-warn"></div>
+
+  <section id="view-daily" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>每日记录</h2>
+        <div class="sp">
+          <input type="date" id="daily-date">
+          <button class="btn sm" id="btn-today">今天</button>
+        </div>
+      </div>
+      <div id="daily-head"></div>
+    </div>
+    <div class="card" id="card-trades"></div>
+    <div class="card" id="card-flows"></div>
+    <div class="card" id="card-divs"></div>
+    <div class="card" id="card-prices"></div>
+    <div class="card" id="card-cash"></div>
+  </section>
+
+  <section id="view-holdings" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>我的持仓</h2>
+        <div class="sp">
+          <button class="btn sm" id="btn-refresh">⟳ 刷新行情</button>
+          <button class="btn primary" id="btn-add">+ 新增持仓</button>
+        </div>
+      </div>
+      <div id="holdings-body"></div>
+      <div class="hint" style="margin-top:12px">
+        「初始份额 / 初始成本」是建仓时的手填数据；之后的买入卖出请在「每日记录 → 今日操作」里录入，份额与成本会自动调整。<br>
+        不使用交易记录也可以，此时初始值就等于当前持仓。
+      </div>
+    </div>
+  </section>
+
+  <section id="view-trend" hidden>
+    <div class="card">
+      <div class="card-head"><h2>资产走势</h2><div class="sp"><span class="hint" id="trend-range"></span></div></div>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+        <div class="tip" id="chart-tip"></div>
+      </div>
+      <div class="legend" id="chart-legend"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>收益分析</h2><div class="sp"><span class="hint" id="perf-note"></span></div></div>
+      <div id="perf-body"></div>
+      <div class="row-inline" style="margin-top:12px">
+        <button class="btn sm" id="btn-show-cf">查看现金流明细</button>
+        <button class="btn sm" id="btn-show-inv">查看净投入构成</button>
+      </div>
+      <div id="cf-detail" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>与指数对比</h2>
+        <div class="sp">
+          <select id="bench-pick" style="width:auto"></select>
+          <button class="btn sm" id="btn-bench-fetch">⟳ 抓取指数行情</button>
+          <span class="hint" id="bench-note"></span>
+        </div>
+      </div>
+      <div id="bench-body"></div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="bench-chart"></canvas>
+        <div class="tip" id="bench-tip"></div>
+      </div>
+      <div class="legend" id="bench-legend"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>月度盈亏</h2><div class="sp" id="month-nav"></div></div>
+      <div id="month-body"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>历史记录</h2><div class="sp"><span class="hint" id="hist-sum"></span></div></div>
+      <div id="history-body"></div>
+    </div>
+  </section>
+
+  <section id="view-data" hidden>
+    <div class="card">
+      <div class="card-head"><h2>数据安全总览</h2><div class="sp"><span class="hint" id="safety-badge"></span></div></div>
+      <div id="safety-body"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2>自动快照</h2>
+        <div class="sp"><span class="hint">变更前自动留存 · 最多 50 份</span></div>
+      </div>
+      <div class="hint" style="margin-bottom:12px">
+        这是最主要的一道保险：改错了、误删了、撤销不掉的，都能回到之前任意一个版本。
+      </div>
+      <div id="snap-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>自动备份到文件</h2><div class="sp"><span class="hint" id="fb-status"></span></div></div>
+      <div class="hint" style="margin-bottom:12px" id="fb-desc">
+        选定磁盘上的一个文件后，每次保存都会自动覆盖写入。即使浏览器数据被清空，文件里的备份依然在。
+      </div>
+      <div class="row-inline" id="fb-actions"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>多设备同步</h2><div class="sp"><span class="hint" id="sync-status"></span></div></div>
+      <div id="sync-body"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>手动导出</h2></div>
+      <div class="hint" style="margin-bottom:14px">
+        默认情况下所有数据只保存在这台设备的浏览器里，不会上传到任何服务器。<br>
+        只有当你主动开启上面的「多设备同步」时，数据才会发送到你自己 GitHub 账号下的 Gist。<br>
+        换设备、清理浏览器缓存前，也建议「导出备份」保存一份 JSON 文件。
+      </div>
+      <div class="row-inline">
+        <button class="btn primary" id="btn-export">导出备份 (JSON)</button>
+        <button class="btn" id="btn-import">导入备份</button>
+        <button class="btn" id="btn-csv">导出历史 (CSV)</button>
+        <button class="btn" id="btn-tcsv">导出交易流水 (CSV)</button>
+        <button class="btn" id="btn-fcsv">导出入金流水 (CSV)</button>
+        <button class="btn" id="btn-dcsv">导出分红送股 (CSV)</button>
+        <button class="btn danger" id="btn-clear">清空全部数据</button>
+        <input type="file" id="file-input" accept="application/json,.json" hidden>
+      </div>
+      <div class="hint" style="margin-top:16px">当前：<b id="data-stat">—</b></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>行情与记账设置</h2></div>
+      <label class="row-inline" style="cursor:pointer">
+        <input type="checkbox" id="opt-autofetch"><span>打开「每日记录」时自动抓取最新价</span>
+      </label>
+      <div class="hint" style="margin-top:14px">
+        行情来源：腾讯财经行情接口（股票 / ETF / 港股 / 美股 / 场外基金净值）。<br>
+       该接口数据仅供参考，不构成投资建议。抓取失败时仍可手动录入价格。
+      </div>
+    </div>
+  </section>
+
+  <section id="view-log" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>操作日志</h2>
+        <div class="sp"><span class="hint" id="log-stat">—</span></div>
+      </div>
+      <div class="log-filters">
+        <select id="log-type"></select>
+        <input type="search" id="log-q" placeholder="搜索操作内容 / 详情…">
+        <input type="date" id="log-from">
+        <span class="hint">至</span>
+        <input type="date" id="log-to">
+        <button class="btn sm" id="btn-log-reset">重置</button>
+      </div>
+      <div class="row-inline" style="margin:10px 0 14px">
+        <button class="btn sm" data-log-range="today">今天</button>
+        <button class="btn sm" data-log-range="7">近 7 天</button>
+        <button class="btn sm" data-log-range="30">近 30 天</button>
+        <button class="btn sm" data-log-range="all">全部</button>
+      </div>
+      <div id="log-body"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>日志管理</h2></div>
+      <div class="hint" style="margin-bottom:14px">
+        这里记录你做过的每一次操作（记一笔、改持仓、导入导出、同步…），方便回溯和核对。<br>
+        日志会跟着「导出备份」一起走，从云端恢复时也是合并保留，不会被远端的旧日志覆盖。<br>
+        日志不进自动快照（否则几十份快照会把浏览器存储撑爆），最多保留最近 2000 条。
+      </div>
+      <div class="row-inline">
+        <button class="btn" id="btn-log-export">导出日志 (CSV)</button>
+        <button class="btn danger" id="btn-log-clear">清空日志</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 持仓编辑 -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card">
+    <h3 id="modal-title">新增持仓</h3>
+    <div class="field">
+      <label>名称 / 代码 / 拼音缩写 *</label>
+      <div class="ac-wrap">
+        <input id="f-search" autocomplete="off" spellcheck="false" placeholder="例如：茅台、gzmt、600519、沪深300ETF">
+        <div class="ac-list" id="f-ac" hidden></div>
+      </div>
+      <div style="margin-top:8px" id="f-picked"><span class="hint">输入后从下拉列表中选择，或直接保存由系统自动匹配</span></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>代码</label><input id="f-code" placeholder="600519" autocomplete="off"></div>
+      <div class="field"><label>类型</label>
+        <select id="f-type">
+          <option value="stock">股票</option><option value="fund">基金</option>
+          <option value="index">指数</option><option value="other">其他</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>初始份额 *</label><input id="f-shares" type="number" step="0.0001" min="0" placeholder="100"></div>
+      <div class="field"><label>初始成本价 *</label><input id="f-cost" type="number" step="0.0001" min="0" placeholder="1680.50"></div>
+    </div>
+    <div class="hint" id="f-preview" style="margin:-4px 0 10px">投入成本：—</div>
+    <div class="modal-foot">
+      <button class="btn" id="btn-cancel">取消</button>
+      <button class="btn primary" id="btn-save-holding">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 交易录入 -->
+<div class="modal" id="tmodal" hidden>
+  <div class="modal-card">
+    <h3 id="tmodal-title">添加今日操作</h3>
+    <div class="field" style="text-align:center">
+      <div class="seg" id="t-side">
+        <button data-side="buy" class="on">买入</button>
+        <button data-side="sell">卖出</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>标的 *</label>
+      <div class="ac-wrap">
+        <input id="t-sec" autocomplete="off" spellcheck="false" placeholder="搜索名称 / 代码，如 茅台、510300">
+        <div class="ac-list" id="t-ac" hidden></div>
+      </div>
+      <div class="row-inline" id="t-chips" style="margin-top:9px"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>数量 *</label><input id="t-shares" type="number" step="0.0001" min="0" placeholder="100"></div>
+      <div class="field"><label>价格 *</label><input id="t-price" type="number" step="0.0001" min="0" placeholder="0.0000"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>手续费</label><input id="t-fee" type="number" step="0.01" min="0" placeholder="0"></div>
+      <div class="field"><label>备注</label><input id="t-note" placeholder="可选"></div>
+    </div>
+    <div class="hint" id="t-preview">金额：—</div>
+    <div class="modal-foot">
+      <button class="btn" id="t-cancel">取消</button>
+      <button class="btn primary" id="t-save">添加</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="dmodal" hidden>
+  <div class="modal-card">
+    <h3 id="dmodal-title">记录分红送股</h3>
+    <div class="field" style="text-align:center">
+      <div class="seg" id="d-kind">
+        <button data-kind="cash" class="on">现金分红</button>
+        <button data-kind="shares">送股 / 转股</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>选择持仓 *</label>
+      <input id="d-filter" placeholder="筛选名称 / 代码，留空显示全部" autocomplete="off">
+      <div class="row-inline" id="d-chips" style="margin-top:9px; max-height:176px; overflow:auto"></div>
+    </div>
+    <div class="field" style="text-align:center">
+      <div class="seg mini" id="d-mode">
+        <button data-mode="per" class="on">按每 10 股</button>
+        <button data-mode="total">直接填总额</button>
+      </div>
+    </div>
+    <div class="field"><label id="d-value-label">每 10 股派息（元）*</label>
+      <input id="d-value" type="number" step="0.0001" min="0" placeholder="例如 3.5"></div>
+    <div class="field"><label>备注</label><input id="d-note" placeholder="可选，例如：2025 年度分红 / 10转4"></div>
+    <div class="hint" id="d-preview">影响：—</div>
+    <div class="hint" style="margin-top:8px">现金分红会自动加进当天的「可用现金」建议值；送股 / 转股会自动增加份额并摊薄成本价。红利税请按税后金额填写。</div>
+    <div class="modal-foot">
+      <button class="btn" id="d-cancel">取消</button>
+      <button class="btn primary" id="d-save">添加</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="fmodal" hidden>
+  <div class="modal-card">
+    <h3 id="fmodal-title">记录出入金</h3>
+    <div class="field" style="text-align:center">
+      <div class="seg" id="fl-side">
+        <button data-side="in" class="on">转入</button>
+        <button data-side="out">转出</button>
+      </div>
+    </div>
+    <div class="field"><label>金额 *</label><input id="fl-amount" type="number" step="0.01" min="0" placeholder="10000.00"></div>
+    <div class="field"><label>备注</label><input id="fl-note" placeholder="可选，例如：银行卡转入 / 取出生活费"></div>
+    <div class="hint">转入 = 从银行把钱转进证券账户；转出 = 把账户里的钱取回银行。买卖股票基金不算出入金。</div>
+    <div class="modal-foot">
+      <button class="btn" id="fl-cancel">取消</button>
+      <button class="btn primary" id="fl-save">添加</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+var STORE_KEY = "portfolio-tracker-v1";
+var QUOTE_API = "https://qt.gtimg.cn/q=";
+var SEARCH_API = "https://smartbox.gtimg.cn/s3/?t=all&q=";
+var CACHE_MS = 60000;
+var SNAP_KEY = "portfolio-snapshots-v1";
+var FB_TIME_KEY = "portfolio-filebackup-at";
+var SNAP_MAX = 50;
+var SNAP_BYTES_MAX = 3400000;
+var LOG_MAX = 2000;
+var KLINE_API = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=";
+var BENCH_KEY = "portfolio-bench-v1";
+var BENCH_LIST = [
+  { secid:"sh000300", label:"沪深300" },
+  { secid:"sh000001", label:"上证指数" },
+  { secid:"sh000905", label:"中证500" },
+  { secid:"sz399006", label:"创业板指" }
+];
+var SYNC_KEY = "portfolio-sync-v1";
+var SYNC_TOKEN_KEY = "portfolio-sync-token-v1";
+var SYNC_FILE = "portfolio-tracker.json";
+var SYNC_API = "https://api.github.com";
+var STATIC_SEC = "sh688825|长鑫科技|GP-A;sh601398|工商银行|GP-A;sh601939|建设银行|GP-A;sh601288|农业银行|GP-A;sh601988|中国银行|GP-A;sh601857|中国石油|GP-A;sh600938|中国海油|GP-A;sh600519|贵州茅台|GP-A;sz300750|宁德时代|GP-A;sh601138|工业富联|GP-A;sh600036|招商银行|GP-A;sh601628|中国人寿|GP-A;sh601088|中国神华|GP-A;sh601318|中国平安|GP-A;sh688981|中芯国际|GP-A;sz300308|中际旭创|GP-A;sh601899|紫金矿业|GP-A;sz002594|比亚迪|GP-A;sh600900|长江电力|GP-A;sh601328|交通银行|GP-A;sh601658|邮储银行|GP-A;sh688256|寒武纪|GP-A;sz000333|美的集团|GP-A;sh601728|中国电信|GP-A;sz300502|新易盛|GP-A;sh688041|海光信息|GP-A;sh603259|药明康德|GP-A;sh601998|中信银行|GP-A;sz002371|北方华创|GP-A;sh688235|百济神州|GP-A;sh600030|中信证券|GP-A;sh688347|华虹宏力|GP-A;sz002475|立讯精密|GP-A;sh601166|兴业银行|GP-A;sh603993|洛阳钼业|GP-A;sh601319|中国人保|GP-A;sh601869|长飞光纤|GP-A;sh600000|浦发银行|GP-A;sh600183|生益科技|GP-A;sh600276|恒瑞医药|GP-A;sz002384|东山精密|GP-A;sh688012|中微公司|GP-A;sh601601|中国太保|GP-A;sz002415|海康威视|GP-A;sh601211|国泰海通|GP-A;sh600150|中国船舶|GP-A;sz300394|天孚通信|GP-A;sz300059|东方财富|GP-A;sz000858|五 粮 液|GP-A;sz002916|深南电路|GP-A;sh601225|陕西煤业|GP-A;sh601919|中远海控|GP-A;sh603986|兆易创新|GP-A;sh688008|澜起科技|GP-A;sz002714|牧原股份|GP-A;sh688808|联讯仪器|GP-A;sz300408|三环集团|GP-A;sz002142|宁波银行|GP-A;sh601816|京沪高铁|GP-A;sh600919|江苏银行|GP-A;sz000001|平安银行|GP-A;sz002463|沪电股份|GP-A;sh603268|松发股份|GP-A;sz000338|潍柴动力|GP-A;sh600309|万华化学|GP-A;sh688820|盛合晶微|GP-A;sz000651|格力电器|GP-A;sz003816|中国广核|GP-A;sz002379|宏桥控股|GP-A;sz000725|京东方Ａ|GP-A;sz300476|胜宏科技|GP-A;sh688498|源杰科技|GP-A;sh688802|沐曦股份-U|GP-A;sz300760|迈瑞医疗|GP-A;sh600188|兖矿能源|GP-A;sh603288|海天味业|GP-A;sh600690|海尔智家|GP-A;sh688072|拓荆科技|GP-A;sh601985|中国核电|GP-A;sh688795|摩尔线程-U|GP-A;sz002938|鹏鼎控股|GP-A;sh600025|华能水电|GP-A;sh601898|中煤能源|GP-A;sh688836|宇树科技-W|GP-A;sh688801|燧原科技-U|GP-A;sh600406|国电南瑞|GP-A;sh601818|光大银行|GP-A;sh601668|中国建筑|GP-A;sh601066|中信建投|GP-A;sh601766|中国中车|GP-A;sh601336|新华保险|GP-A;sh600887|伊利股份|GP-A;sz300274|阳光电源|GP-A;sz300433|蓝思科技|GP-A;sh600989|宝丰能源|GP-A;sh601872|招商轮船|GP-A;sh600930|华电新能|GP-A;sh600031|三一重工|GP-A;sh511880|银华日利ETF|ETF;sh511990|华宝添益ETF|ETF;sh513120|港股创新药ETF广发|ETF;sh588000|科创50ETF华夏|ETF;sh513310|中韩半导体ETF华泰柏瑞|ETF;sh588170|科创半导体ETF华夏|ETF;sz159915|创业板ETF易方达|ETF;sh563360|A500ETF华泰柏瑞|ETF;sz159352|A500ETF南方|ETF;sh518880|黄金ETF华安|ETF;sz159516|半导体设备ETF国泰|ETF;sz159338|中证A500ETF国泰|ETF;sz159845|中证1000ETF华夏|ETF;sh588200|科创芯片ETF嘉实|ETF;sz159570|港股通创新药ETF汇添富|ETF;sh510300|沪深300ETF华泰柏瑞|ETF;sz159001|货币ETF易方达|ETF;sz159509|纳指科技ETF景顺|ETF;sh515880|通信ETF国泰|ETF;sh513090|香港证券ETF易方达|ETF;sh512100|中证1000ETF南方|ETF;sh560010|中证1000ETF广发|ETF;sh520500|恒生创新药ETF华泰柏瑞|ETF;sh510500|中证500ETF南方|ETF;sh588080|科创50ETF易方达|ETF;sz159361|A500ETF易方达|ETF;sh513130|恒生科技ETF华泰柏瑞|ETF;sh513050|中概互联网ETF易方达|ETF;sh513180|恒生科技ETF华夏|ETF;sh510310|沪深300ETF易方达|ETF;sz159941|纳指ETF广发|ETF;sz159567|港股创新药ETF银华|ETF;sh510050|上证50ETF华夏|ETF;sz159316|港股通创新药ETF易方达|ETF;sh512480|半导体ETF国联安|ETF;sh512050|A500ETF华夏|ETF;sz159992|创新药ETF银华|ETF;sz159792|港股通互联网ETF富国|ETF;sz159131|港股通信息技术ETF华宝|ETF;sh512890|红利低波ETF华泰柏瑞|ETF;sh512880|证券ETF国泰|ETF;sh588710|科创半导体设备ETF华泰柏瑞|ETF;sz159949|创业板50ETF华安|ETF;sz159937|黄金ETF博时|ETF;sz159558|半导体设备ETF易方达|ETF;sh512200|房地产ETF南方|ETF;sh513330|恒生互联网ETF华夏|ETF;sh589720|科创创新药ETF国泰|ETF;sh513780|港股创新药ETF景顺|ETF;sz159919|沪深300ETF嘉实|ETF;sh600941|中国移动|GP-A;sh601857|中国石油|GP-A";
+
+var state = { holdings: [], days: {}, settings: {} };
+var ui = { tab:"daily", date:todayStr(), draft:{}, autoFetchedFor:null, dirty:false, snapAll:false };
+var fileHandle = null, fileBackupTimer = null, fileBackupErr = "";
+var QUOTE = { map:{}, ts:0, pending:null, err:"", fetching:false };
+var storageOK = true;
+var editingId = null, pickedSec = null;
+var acResults = [], acIndex = -1, acTimer = null, acSeq = 0, acTarget = null;
+var tSide = "buy", tPicked = null;
+var chartOn = { total:true, value:true, cost:true, cash:false };
+var BENCH = { secid:"sh000300", list:[], ts:0, err:"", fetching:false, pending:null };
+var SYNC = { gistId:"", auto:false, lastPushAt:0, lastPullAt:0, login:"", err:"", busy:false };
+var monthView = null;
+var dKind = "cash", dMode = "per", dPicked = null, syncTimer = null;
+
+/* ==================== 工具 ==================== */
+function $(s,r){ return (r||document).querySelector(s); }
+function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+function pad2(n){ return (n<10?"0":"") + n; }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+function toNum(v){ if(v===""||v===null||v===undefined) return NaN; var n=parseFloat(v); return isFinite(n)?n:NaN; }
+function fmt(n,d){ d=(d===undefined)?2:d; if(!isFinite(n)) n=0;
+  return n.toLocaleString("zh-CN",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function money(n,d){ return "¥" + fmt(n,d); }
+function signedMoney(n,d){ if(!isFinite(n)) n=0; return (n>0?"+":"") + (n<0?"-":"") + "¥" + fmt(Math.abs(n),d); }
+function pctStr(n){ if(!isFinite(n)) return "—"; return (n>0?"+":"") + fmt(n,2) + "%"; }
+function clsOf(n){ return n>0 ? "up" : (n<0 ? "down" : "flat"); }
+function trimNum(n,d){ return fmt(n,d).replace(/\.?0+$/,"") || "0"; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+  return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]; }); }
+function sortedDates(){ return Object.keys(state.days).filter(function(d){ return state.days[d] && state.days[d].totals; }).sort(); }
+
+/* ==================== 内置标的（离线兜底） ==================== */
+var STATIC_LIST = (function(){
+  var out = [];
+  String(STATIC_SEC||"").split(";").forEach(function(row){
+    var f = row.split("|");
+    if(f.length >= 3 && f[0]) out.push({ secid:f[0], market:f[0].slice(0,2), code:f[0].slice(2), name:f[1], raw:f[2] });
+  });
+  return out;
+})();
+
+/* ==================== 市场 / 类型 ==================== */
+var MARKET_LABEL = { sh:"沪", sz:"深", bj:"北", jj:"场外", hk:"港", us:"美" };
+function marketLabel(m){ return MARKET_LABEL[m] || (m||""); }
+function typeLabel(t){ return ({stock:"股票",fund:"基金",index:"指数",other:"其他"})[t] || "其他"; }
+function mapType(raw){
+  raw = String(raw||"").toUpperCase();
+  if(raw.indexOf("ZS") === 0) return "index";
+  if(raw.indexOf("GP") === 0) return "stock";
+  if(/^(ETF|LOF|KJ|FJ|QZ|JJ)/.test(raw)) return "fund";
+  return "other";
+}
+function exchangeFundMarket(code){
+  if(/^(50\d|51[0-8]|56[0-3]|58[89])\d/.test(code)) return "sh";
+  if(/^1[5-8]\d\d/.test(code)) return "sz";
+  return "";
+}
+function inferMarket(code, type){
+  if(!code) return "";
+  code = String(code).trim().toUpperCase();
+  if(/^\d{5}$/.test(code)) return "hk";
+  if(/^[A-Z]/.test(code)) return "us";
+  if(!/^\d{6}$/.test(code)) return "";
+  var ef = exchangeFundMarket(code);
+  if(ef) return ef;
+  if(type === "fund") return "jj";
+  if(/^[69]/.test(code)) return "sh";
+  if(/^[023]/.test(code)) return "sz";
+  if(/^[48]/.test(code)) return "bj";
+  return "sh";
+}
+function secidOf(h){ return (h && h.market && h.code) ? (h.market + h.code) : ""; }
+function hasSec(h){ return !!secidOf(h); }
+function holdingById(id){
+  for(var i=0;i<state.holdings.length;i++) if(state.holdings[i].id === id) return state.holdings[i];
+  return null;
+}
+
+/* ==================== 存取 / 迁移 ==================== */
+function load(){
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      var obj = JSON.parse(raw);
+      state.holdings = Array.isArray(obj.holdings) ? obj.holdings : [];
+      state.days = (obj.days && typeof obj.days === "object") ? obj.days : {};
+      state.settings = (obj.settings && typeof obj.settings === "object") ? obj.settings : {};
+      state.log = Array.isArray(obj.log) ? obj.log : [];
+    }
+  }catch(e){ console.warn("读取数据失败", e); storageOK = false; }
+  migrate();
+}
+function migrate(){
+  if(!Array.isArray(state.log)) state.log = [];
+  if(state.log.length > LOG_MAX) state.log.length = LOG_MAX;
+  if(typeof state.settings.autoFetch !== "boolean") state.settings.autoFetch = true;
+  state.holdings.forEach(function(h){
+    h.type = h.type || "stock";
+    if(!h.market){ var m = inferMarket(h.code, h.type); if(m) h.market = m; }
+    if(h.market === "jj") h.type = "fund";
+    if(typeof h.baseShares !== "number") h.baseShares = (typeof h.shares === "number" ? h.shares : 0);
+    if(typeof h.baseCost !== "number") h.baseCost = (typeof h.cost === "number" ? h.cost : 0);
+  });
+  Object.keys(state.days).forEach(function(d){
+    var day = state.days[d];
+    if(!Array.isArray(day.trades)) day.trades = [];
+    if(!Array.isArray(day.flows)) day.flows = [];
+    if(!Array.isArray(day.divs)) day.divs = [];
+    if(day.cash === undefined) day.cash = null;
+  });
+}
+function save(){
+  savePersist();
+  fbSchedule();
+  syncSchedule();
+}
+// 只落盘，不触发文件备份与云端同步的排队（给日志、同步回执这类收尾动作用，避免自己触发自己）
+function savePersist(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch(e){ storageOK = false; renderBanners(); toast("保存失败：浏览器存储不可用，请及时导出备份"); }
+}
+
+/* ==================== 交易回放（核心） ==================== */
+function baseOf(h){
+  return {
+    shares: (typeof h.baseShares === "number") ? h.baseShares : (h.shares || 0),
+    cost:   (typeof h.baseCost   === "number") ? h.baseCost   : (h.cost   || 0)
+  };
+}
+function tradeEntries(){
+  var out = [];
+  Object.keys(state.days).forEach(function(d){
+    var arr = state.days[d] && state.days[d].trades;
+    if(arr && arr.length) arr.forEach(function(tr){ out.push({ date:d, tr:tr }); });
+  });
+  out.sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  return out;
+}
+function findByTrade(tr){
+  for(var i=0;i<state.holdings.length;i++){
+    var h = state.holdings[i];
+    if(tr.holdingId && h.id === tr.holdingId) return h;
+    if(tr.secid && secidOf(h) === tr.secid) return h;
+    if(tr.code && h.code === tr.code && (h.market||"") === (tr.market||"")) return h;
+    if(!tr.code && h.name === tr.name) return h;
+  }
+  return null;
+}
+// 按日期回放全部交易，得到某一时点的持仓与已实现盈亏
+// 分红 / 送股记录 → 持仓
+function findByDiv(dv){
+  for(var i=0;i<state.holdings.length;i++){
+    var h = state.holdings[i];
+    if(dv.holdingId && h.id === dv.holdingId) return h;
+    if(dv.secid && secidOf(h) === dv.secid) return h;
+    if(dv.code && h.code === dv.code && (h.market||"") === (dv.market||"")) return h;
+    if(!dv.code && h.name === dv.name) return h;
+  }
+  return null;
+}
+// 按日期回放全部交易，得到某一时点的持仓与已实现盈亏
+function replay(asOf, pending){
+  var pos = {}, info = {}, divInfo = {}, divCash = {};
+  state.holdings.forEach(function(h){
+    var b = baseOf(h);
+    pos[h.id] = { shares:b.shares, cost:b.cost, realized:0, buys:0, sells:0, buyAmt:0, sellAmt:0,
+                  divCash:0, divShares:0, divCount:0 };
+  });
+  var evs = [];
+  tradeEntries().forEach(function(e){ evs.push({ date:e.date, kind:"trade", tr:e.tr }); });
+  divEntries().forEach(function(e){ evs.push({ date:e.date, kind:"div", dv:e.dv }); });
+  if(pending && pending.date){
+    evs = evs.filter(function(e){ return e.date !== pending.date; });
+    (pending.trades || []).forEach(function(tr){ evs.push({ date:pending.date, kind:"trade", tr:tr }); });
+    (pending.divs || []).forEach(function(dv){ evs.push({ date:pending.date, kind:"div", dv:dv }); });
+  }
+  // 同一天：先按登记日份额处理分红送股，再处理当日买卖
+  evs.sort(function(a,b){
+    if(a.date !== b.date) return a.date < b.date ? -1 : 1;
+    if(a.kind !== b.kind) return a.kind === "div" ? -1 : 1;
+    return 0;
+  });
+  evs.forEach(function(e){
+    if(asOf && e.date > asOf) return;
+    if(e.kind === "div"){
+      var dv = e.dv, dh = findByDiv(dv);
+      if(!dh || !pos[dh.id]) return;
+      var dp = pos[dh.id], damt = 0, dadd = 0;
+      if(dv.kind === "cash"){
+        damt = divAmounts(dv, dp.shares);
+        if(damt > 0){ dp.divCash += damt; dp.divCount++; divCash[e.date] = (divCash[e.date]||0) + damt; }
+      }else{
+        dadd = divAmounts(dv, dp.shares);
+        if(dadd > 0){
+          // 送股/转股：总成本不变，成本价按新股数摊薄
+          var dns = dp.shares + dadd;
+          dp.cost = dns > 0 ? (dp.shares * dp.cost) / dns : dp.cost;
+          dp.shares = dns;
+          dp.divShares += dadd; dp.divCount++;
+        }
+      }
+      divInfo[dv.id] = { amount:damt, addShares:dadd, shares:dp.shares, cost:dp.cost,
+                         prevShares: dp.shares - dadd, prevCost: (dp.shares - dadd) > 0 ? (dp.shares * dp.cost) / (dp.shares - dadd) : dp.cost };
+      return;
+    }
+    var tr = e.tr, h = findByTrade(tr);
+    if(!h || !pos[h.id]) return;
+    var p = pos[h.id], sh = Math.max(0, toNum(tr.shares) || 0), pr = toNum(tr.price) || 0, fee = toNum(tr.fee) || 0;
+    if(tr.side === "buy"){
+      var ns = p.shares + sh;
+      if(ns > 0) p.cost = (p.shares*p.cost + sh*pr + fee)/ns;
+      p.shares = ns; p.buys++; p.buyAmt += sh*pr + fee;
+    }else{
+      var q = Math.min(p.shares, sh);
+      var rz = q*pr - fee - q*p.cost;
+      p.realized += rz; p.sells++; p.sellAmt += sh*pr - fee;
+      info[tr.id] = { realized:rz, costAt:p.cost, short: sh > p.shares + 1e-9 };
+      p.shares -= q;
+    }
+  });
+  return { pos:pos, trade:info, div:divInfo, divCash:divCash };
+}
+function posOf(h, asOf, pending){
+  var r = replay(asOf, pending).pos;
+  return r[h.id] || { shares:baseOf(h).shares, cost:baseOf(h).cost, realized:0, buys:0, sells:0, buyAmt:0, sellAmt:0,
+                      divCash:0, divShares:0, divCount:0 };
+}
+function realizedTotal(){
+  var r = replay(null).pos, sum = 0;
+  Object.keys(r).forEach(function(k){ sum += r[k].realized; });
+  return sum;
+}
+
+/* ==================== 出入金 ==================== */
+function flowEntries(){
+  var out = [];
+  Object.keys(state.days).forEach(function(d){
+    var arr = state.days[d] && state.days[d].flows;
+    if(arr && arr.length) arr.forEach(function(f){ out.push({ date:d, fl:f }); });
+  });
+  out.sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  return out;
+}
+// 正数 = 净转入（钱进账户）
+function flowNet(flows){
+  var n = 0;
+  (flows || []).forEach(function(f){
+    var a = toNum(f.amount) || 0;
+    n += (f.side === "out") ? -a : a;
+  });
+  return n;
+}
+function hasFlows(){ return flowEntries().length > 0; }
+
+/* ==================== 分红送股 ==================== */
+function divEntries(){
+  var out = [];
+  Object.keys(state.days).forEach(function(d){
+    var arr = state.days[d] && state.days[d].divs;
+    if(arr && arr.length) arr.forEach(function(dv){ out.push({ date:d, dv:dv }); });
+  });
+  out.sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  return out;
+}
+// 一条分红/送股在给定份额下对应的现金（元）或股数
+function divAmounts(dv, shares){
+  var sh = Math.max(0, shares || 0);
+  if(dv.mode === "total") return dv.kind === "cash" ? (toNum(dv.amount)||0) : (toNum(dv.shares)||0);
+  return sh * (toNum(dv.per10) || 0) / 10;
+}
+function divCashOn(date, pending){
+  var r = replay(date, pending || null);
+  return r.divCash[date] || 0;
+}
+function dividendTotal(){
+  var r = replay(null).pos, sum = 0;
+  Object.keys(r).forEach(function(k){ sum += r[k].divCash; });
+  return sum;
+}
+function dividendSharesTotal(){
+  var r = replay(null).pos, sum = 0;
+  Object.keys(r).forEach(function(k){ sum += r[k].divShares; });
+  return sum;
+}
+function divKindLabel(k){ return k === "shares" ? "送股/转股" : "现金分红"; }
+function divPer10Unit(k){ return k === "cash" ? "元" : "股"; }
+function earliestDate(){
+  var ds = [];
+  Object.keys(state.days).forEach(function(d){
+    var day = state.days[d];
+    if(day && (day.totals || (day.prices && Object.keys(day.prices).length) ||
+       (day.trades && day.trades.length) || (day.flows && day.flows.length))) ds.push(d);
+  });
+  ds.sort();
+  return ds.length ? ds[0] : null;
+}
+function initialCost(){
+  var c = 0;
+  state.holdings.forEach(function(h){
+    var b = baseOf(h);
+    if(b.shares > 0 && b.cost > 0) c += b.shares * b.cost;
+  });
+  return c;
+}
+// 构建 XIRR 用的现金流：负=投入，正=收回
+function cashflowSeries(){
+  var dates = sortedDates();
+  if(!dates.length) return { flows:[], ok:false, reason:"还没有历史记录" };
+  var last = dates[dates.length - 1];
+  var total = state.days[last].totals.value + cashOf(last);
+  var first = earliestDate() || dates[0];
+  var list = [], mode = "", warn = "";
+
+  var ic = initialCost();
+  if(ic > 0){
+    list.push({ date:first, amount:-ic, label:"初始建仓成本" });
+  }
+  var fs = flowEntries();
+  if(fs.length){
+    mode = "transfer";
+    fs.forEach(function(e){
+      var a = toNum(e.fl.amount) || 0;
+      if(a <= 0) return;
+      list.push({ date:e.date, amount: (e.fl.side === "out" ? a : -a),
+                  label: (e.fl.side === "out" ? "转出" : "转入") + (e.fl.note ? (" · " + e.fl.note) : "") });
+    });
+  }else{
+    var te = tradeEntries();
+    mode = te.length ? "trade" : "initial";
+    te.forEach(function(e){
+      var tr = e.tr, a = (toNum(tr.shares)||0)*(toNum(tr.price)||0), fee = toNum(tr.fee) || 0;
+      if(a <= 0) return;
+      list.push({ date:e.date, amount: (tr.side === "sell" ? (a - fee) : -(a + fee)),
+                  label: (tr.side === "sell" ? "卖出 " : "买入 ") + (tr.name || "") });
+    });
+  }
+  list.push({ date:last, amount: total, label:"期末总资产" });
+  list.sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+
+  var neg = 0, pos = 0;
+  list.forEach(function(f){ if(f.amount > 0) pos += f.amount; else neg += -f.amount; });
+  var enough = neg > 0 && pos > 0;
+  return { flows:list, mode:mode, total:total, lastDate:last, firstDate:first,
+           invested:neg, returned:pos, ok:enough && list.length >= 2,
+           reason: enough ? "" : "现金流不足，无法计算" };
+}
+
+/* ==================== XIRR（资金加权年化收益率） ==================== */
+function daysBetween(a, b){ return (new Date(b) - new Date(a)) / 86400000; }
+function xirr(flows){
+  if(!flows || flows.length < 2) return null;
+  var hasPos = false, hasNeg = false, scale = 0;
+  flows.forEach(function(f){
+    if(f.amount > 0) hasPos = true;
+    if(f.amount < 0) hasNeg = true;
+    scale += Math.abs(f.amount);
+  });
+  if(!hasPos || !hasNeg || scale === 0) return null;
+  var t0 = flows[0].date;
+  var ts = flows.map(function(f){ return daysBetween(t0, f.date) / 365; });
+  var tol = scale * 1e-9;
+  function npv(r){
+    var s = 0;
+    for(var i=0;i<flows.length;i++){
+      var d = Math.pow(1 + r, ts[i]);
+      if(!isFinite(d) || d === 0) return NaN;
+      s += flows[i].amount / d;
+    }
+    return s;
+  }
+  function closeEnough(r){ var v = npv(r); return isFinite(v) && Math.abs(v) < Math.max(tol, scale*1e-7); }
+
+  // 牛顿法
+  var r = 0.1;
+  for(var i=0;i<100;i++){
+    var f0 = npv(r);
+    if(!isFinite(f0)) break;
+    if(closeEnough(r)) return r;
+    var h = 1e-7;
+    var d0 = (npv(r + h) - npv(r - h)) / (2*h);
+    if(!isFinite(d0) || Math.abs(d0) < 1e-15) break;
+    var nr = r - f0 / d0;
+    if(!isFinite(nr)) break;
+    if(nr <= -0.999999) nr = (r - 0.999999) / 2;
+    if(nr > 1e6) nr = (r + 1e6) / 2;
+    if(Math.abs(nr - r) < 1e-11){ r = nr; break; }
+    r = nr;
+  }
+  if(closeEnough(r)) return r;
+
+  // 二分法兜底（更稳，避免牛顿收敛到复根或发散）
+  var brackets = [[-0.9999, 10], [-0.9999, 200], [-0.999999, 1e4]];
+  for(var b=0;b<brackets.length;b++){
+    var lo = brackets[b][0], hi = brackets[b][1];
+    var flo = npv(lo), fhi = npv(hi);
+    if(!isFinite(flo) || !isFinite(fhi) || flo * fhi > 0) continue;
+    for(var j=0;j<400;j++){
+      var mid = (lo + hi) / 2, fm = npv(mid);
+      if(!isFinite(fm)) break;
+      if(Math.abs(fm) < Math.max(tol, scale*1e-8)) return mid;
+      if(flo * fm <= 0){ hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
+    }
+    if(Math.abs(npv((lo+hi)/2)) < Math.max(tol, scale*1e-6)) return (lo+hi)/2;
+  }
+  return null;
+}
+function currentXirr(){
+  var s = cashflowSeries();
+  if(!s.ok) return { value:null, series:s };
+  return { value: xirr(s.flows), series:s };
+}
+// 净投入（累计放进去的钱 - 拿回来的钱，含初始建仓）
+function netInvested(){
+  var ic = initialCost();
+  var n = ic;
+  flowEntries().forEach(function(e){
+    var a = toNum(e.fl.amount) || 0;
+    n += (e.fl.side === "out" ? -a : a);
+  });
+  return n;
+}
+
+/* ==================== 计算 ==================== */
+function lastKnownPrice(id, date){
+  var dates = Object.keys(state.days).sort().reverse();
+  for(var i=0;i<dates.length;i++){
+    var d = dates[i];
+    if(date && d > date) continue;
+    var arr = state.days[d].prices;
+    var p = arr ? arr[id] : undefined;
+    if(p !== undefined && p !== null && p !== "" && isFinite(p)) return { price:p, date:d };
+  }
+  return null;
+}
+function prevRecordDate(date){
+  var dates = sortedDates(), found = null;
+  for(var i=0;i<dates.length;i++){ if(dates[i] < date) found = dates[i]; else break; }
+  return found;
+}
+// 未填价格的持仓，按该日之前最近一次记录的价格估算
+function priceFor(holding, prices, date){
+  var p = toNum(prices[holding.id]);
+  if(isFinite(p) && p >= 0) return p;
+  var lp = lastKnownPrice(holding.id, date);
+  return lp ? lp.price : null;
+}
+function computeTotals(prices, date, pending){
+  var r = replay(date, pending).pos, value = 0, cost = 0, missing = 0;
+  state.holdings.forEach(function(h){
+    var p = priceFor(h, prices || {}, date);
+    if(p === null){ missing++; return; }
+    var pos = r[h.id] || { shares:0, cost:0 };
+    value += pos.shares * p;
+    cost  += pos.shares * pos.cost;
+  });
+  var profit = value - cost;
+  return { value:value, cost:cost, profit:profit, profitPct: cost>0 ? profit/cost*100 : 0, missing:missing };
+}
+function dayOf(date){
+  var d = state.days[date];
+  return d || { prices:{}, trades:[], cash:null, totals:null };
+}
+function cashOf(date){
+  var d = state.days[date];
+  return (d && typeof d.cash === "number") ? d.cash : 0;
+}
+function tradesNet(trades){
+  var net = 0;
+  (trades||[]).forEach(function(tr){
+    var amt = (toNum(tr.shares)||0) * (toNum(tr.price)||0), fee = toNum(tr.fee)||0;
+    net += (tr.side === "sell") ? (amt - fee) : -(amt + fee);
+  });
+  return net;
+}
+function prevCash(date){
+  var d = prevRecordDate(date);
+  while(d){
+    var c = state.days[d].cash;
+    if(typeof c === "number") return { cash:c, date:d };
+    d = prevRecordDate(d);
+  }
+  return null;
+}
+function cashStatus(date, draftCash, draftTrades, draftFlows, draftDivs){
+  var pc = prevCash(date);
+  var net = tradesNet(draftTrades);
+  var fn = flowNet(draftFlows);
+  var dv = divCashOn(date, { date:date, trades:draftTrades || [], divs:draftDivs || [] });
+  if(!pc) return { has:false, base:null, net:net, flow:fn, div:dv,
+                   suggest:(typeof draftCash === "number" ? draftCash : null) };
+  return { has:true, base:pc.cash, baseDate:pc.date, net:net, flow:fn, div:dv,
+           suggest:pc.cash + net + fn + dv };
+}
+
+/* ==================== 草稿 ==================== */
+function pendingTrades(date){
+  var d = ui.draft[date];
+  if(!d) return null;
+  return { date:date, trades: d.trades || [], divs: d.divs || [] };
+}
+function pendingFlows(date){
+  var d = ui.draft[date];
+  return d ? (d.flows || []) : [];
+}
+function ensureDraft(date){
+  if(!ui.draft[date]){
+    var day = dayOf(date);
+    var prices = {};
+    state.holdings.forEach(function(h){
+      if(day.prices && day.prices[h.id] !== undefined && day.prices[h.id] !== null && day.prices[h.id] !== ""){
+        prices[h.id] = day.prices[h.id];
+      }else{
+        var qp = quotePrice(h);
+        if(qp !== null) prices[h.id] = qp;
+        else { var lp = lastKnownPrice(h.id, date); prices[h.id] = lp ? lp.price : ""; }
+      }
+    });
+    ui.draft[date] = {
+      prices: prices,
+      cash: (typeof day.cash === "number") ? day.cash : "",
+      trades: (day.trades || []).map(function(t){ return Object.assign({}, t); }),
+      flows: (day.flows || []).map(function(f){ return Object.assign({}, f); }),
+      divs: (day.divs || []).map(function(dv){ return Object.assign({}, dv); })
+    };
+  }
+  return ui.draft[date];
+}
+function markDirty(){ ui.dirty = true; renderDirty(); }
+function renderDirty(){
+  var el = $("#daily-head"); if(!el) return;
+  if(!ui.dirty){ el.innerHTML = '<span class="hint">修改后记得点下方「保存当日记录」</span>'; return; }
+  el.innerHTML = '<span class="dirty">● 有未保存的改动</span> <span class="hint">（点下方「保存当日记录」写入）</span>';
+}
+
+/* ==================== 网络 ==================== */
+function loadScript(url, charset){
+  return new Promise(function(resolve, reject){
+    var s = document.createElement("script"), done = false;
+    var timer = setTimeout(function(){ finish(new Error("请求超时")); }, 12000);
+    function finish(err){
+      if(done) return; done = true; clearTimeout(timer);
+      if(s.parentNode) s.parentNode.removeChild(s);
+      err ? reject(err) : resolve();
+    }
+    s.onload = function(){ finish(null); };
+    s.onerror = function(){ finish(new Error("网络请求失败")); };
+    if(charset) s.charset = charset;
+    s.src = url;
+    document.head.appendChild(s);
+  });
+}
+function takeGlobal(name){
+  var v = window[name];
+  try{ delete window[name]; }catch(e){ try{ window[name] = undefined; }catch(e2){} }
+  return v;
+}
+function parseHint(raw){
+  if(!raw || raw === "N") return [];
+  return String(raw).split("^").map(function(item){
+    var f = item.split("~");
+    if(f.length < 3 || !f[1]) return null;
+    var market = f[0], code = f[1];
+    if(market === "us") code = code.toUpperCase();
+    return { secid: market+code, market:market, code:code, name:f[2], pinyin:f[3]||"", raw:f[4]||"" };
+  }).filter(Boolean).slice(0, 12);
+}
+function searchStatic(q){
+  var s = String(q||"").trim().toLowerCase();
+  if(!s) return [];
+  var a = [], b = [], c = [];
+  STATIC_LIST.forEach(function(it){
+    var n = it.name.toLowerCase(), d = it.code.toLowerCase();
+    if(d === s || n === s) a.push(it);
+    else if(d.indexOf(s) === 0 || n.indexOf(s) === 0) b.push(it);
+    else if(n.indexOf(s) >= 0 || d.indexOf(s) >= 0) c.push(it);
+  });
+  return a.concat(b, c).slice(0, 12);
+}
+function searchOnline(q){
+  return loadScript(SEARCH_API + encodeURIComponent(q) + "&_=" + Date.now())
+    .then(function(){ return parseHint(takeGlobal("v_hint")); });
+}
+function searchSecurities(q){
+  q = String(q||"").trim();
+  if(!q) return Promise.resolve([]);
+  var local = searchStatic(q);
+  return searchOnline(q).then(function(list){ return list.length ? list : local; })
+    .catch(function(){ if(local.length) return local; throw new Error("搜索失败，请检查网络"); });
+}
+function resolveSecurity(text, typeHint){
+  text = String(text||"").trim();
+  if(!text) return Promise.resolve(null);
+  return searchSecurities(text).then(function(list){
+    if(!list.length) return null;
+    var m = list.filter(function(s){ return s.name === text; })[0]; if(m) return m;
+    m = list.filter(function(s){ return s.code.toLowerCase() === text.toLowerCase(); })[0]; if(m) return m;
+    if(typeHint){ m = list.filter(function(s){ return mapType(s.raw) === typeHint; })[0]; if(m) return m; }
+    return list[0];
+  }).catch(function(){ return null; });
+}
+function parseQuote(raw, secid){
+  var f = String(raw).split("~");
+  if(secid.indexOf("jj") === 0){
+    return { secid:secid, name:f[1]||"", code:f[0]||"", price:toNum(f[5]), pct:toNum(f[7]), time:f[8]||"", kind:"fund" };
+  }
+  return { secid:secid, name:f[1]||"", code:f[2]||"", price:toNum(f[3]), prevClose:toNum(f[4]),
+           pct:toNum(f[32]), time:fmtQuoteTime(f[30]), kind:"price" };
+}
+function fmtQuoteTime(t){
+  t = String(t||"").replace(/\//g, "-");
+  if(/^\d{14}$/.test(t)) return t.slice(0,4)+"-"+t.slice(4,6)+"-"+t.slice(6,8)+" "+t.slice(8,10)+":"+t.slice(10,12);
+  return t.length > 16 ? t.slice(0,16) : t;
+}
+function parseQuoteText(text, secids){
+  var out = {};
+  secids.forEach(function(sid){
+    var m = text.match(new RegExp('v_' + sid + '\\s*=\\s*"([^"]*)"'));
+    if(m) out[sid] = parseQuote(m[1], sid);
+  });
+  return out;
+}
+function fetchQuotes(secids){
+  if(!secids.length) return Promise.resolve({});
+  var url = QUOTE_API + secids.join(",") + "?r=" + Date.now();
+  return loadScript(url, "gbk").then(function(){
+    var out = {};
+    secids.forEach(function(sid){
+      var v = takeGlobal("v_" + sid);
+      if(typeof v === "string" && v) out[sid] = parseQuote(v, sid);
+    });
+    if(Object.keys(out).length) return out;
+    return fetchQuotesViaFetch(secids);
+  }).catch(function(){ return fetchQuotesViaFetch(secids); });
+}
+function fetchQuotesViaFetch(secids){
+  var url = QUOTE_API + secids.join(",") + "?r=" + Date.now();
+  return fetch(url, { cache:"no-store" }).then(function(r){
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    return r.arrayBuffer();
+  }).then(function(buf){
+    var text;
+    try{ text = new TextDecoder("gbk").decode(buf); }catch(e){ text = new TextDecoder("utf-8").decode(buf); }
+    var out = parseQuoteText(text, secids);
+    if(!Object.keys(out).length) throw new Error("未返回行情数据");
+    return out;
+  });
+}
+function ensureQuotes(force){
+  var list = state.holdings.filter(hasSec);
+  if(!list.length) return Promise.resolve({});
+  if(!force && QUOTE.ts && (Date.now() - QUOTE.ts) < CACHE_MS) return Promise.resolve(QUOTE.map);
+  if(QUOTE.pending) return QUOTE.pending;
+  QUOTE.pending = fetchQuotes(list.map(secidOf)).then(function(map){
+    Object.keys(map).forEach(function(k){ QUOTE.map[k] = map[k]; });
+    QUOTE.ts = Date.now(); QUOTE.err = ""; QUOTE.pending = null;
+    return QUOTE.map;
+  }).catch(function(err){
+    QUOTE.pending = null; QUOTE.err = err.message || "获取失败";
+    throw err;
+  });
+  return QUOTE.pending;
+}
+function quoteOf(h){ var sid = secidOf(h); return (sid && QUOTE.map[sid]) ? QUOTE.map[sid] : null; }
+function quotePrice(h){ var q = quoteOf(h); return (q && isFinite(q.price) && q.price > 0) ? q.price : null; }
+
+/* ==================== 提示 ==================== */
+var toastTimer = null;
+function toast(msg){
+  var t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2400);
+}
+function renderStoreWarning(){ renderBanners(); }
+
+/* ==================== 顶部汇总 ==================== */
+function sumCard(k,v,s,c,hl){
+  return '<div class="sum-card'+(hl?' hl':'')+'"><div class="k">'+esc(k)+'</div><div class="v mono '+(c||"")+'">'+v+
+         '</div><div class="s '+(c||"flat")+' mono">'+esc(s)+'</div></div>';
+}
+function renderHeader(){
+  var dates = sortedDates();
+  var last = dates.length ? dates[dates.length-1] : null;
+  var prev = dates.length > 1 ? dates[dates.length-2] : null;
+  var t = last ? state.days[last].totals : { value:0, cost:0, profit:0, profitPct:0 };
+  var cash = last ? cashOf(last) : 0;
+  var total = t.value + cash;
+  var realized = realizedTotal();
+  var prevTotal = prev ? (state.days[prev].totals.value + cashOf(prev)) : null;
+  var diff = (last && prevTotal !== null) ? total - prevTotal : null;
+  var diffPct = (diff !== null && prevTotal > 0) ? diff/prevTotal*100 : null;
+
+  var sub = last ? ("最新记录 " + last) : "还没有任何记录";
+  if(QUOTE.ts) sub += " · 行情 " + new Date(QUOTE.ts).toLocaleTimeString("zh-CN",{hour12:false}).slice(0,5);
+  $("#head-date").textContent = sub;
+
+  var html = "";
+  html += sumCard("总资产", money(total), "持仓 + 现金", "", true);
+  html += sumCard("持仓市值", money(t.value), state.holdings.length + " 个持仓", "");
+  html += sumCard("可用现金", money(cash), last ? ("记录日 "+last) : "未记录", "");
+  html += sumCard("浮动盈亏", signedMoney(t.profit), pctStr(t.profitPct), clsOf(t.profit));
+  html += sumCard("已实现盈亏", signedMoney(realized), "来自卖出", clsOf(realized));
+  var divT = dividendTotal();
+  html += sumCard("累计现金分红", divT ? signedMoney(divT) : "—",
+    divT ? "已计入现金与收益" : "暂无分红记录", divT ? clsOf(divT) : "flat");
+  var xr = currentXirr();
+  html += sumCard("年化收益 XIRR", xr.value === null ? "—" : pctStr(xr.value*100),
+    xr.series.mode === "transfer" ? "按出入金计算" : (xr.series.mode === "trade" ? "按买卖流水估算"
+      : (xr.series.mode === "initial" ? "按建仓成本估算" : "数据不足")),
+    xr.value === null ? "flat" : clsOf(xr.value));
+  html += sumCard("较上一记录日", diff===null?"—":signedMoney(diff), diffPct===null?"—":pctStr(diffPct), diff===null?"flat":clsOf(diff));
+  $("#summary").innerHTML = html;
+}
+
+/* ==================== 每日记录：今日操作 ==================== */
+function renderTrades(){
+  var draft = ensureDraft(ui.date);
+  var trades = draft.trades || [];
+  var info = replay(null, pendingTrades(ui.date)).trade;
+  var buyAmt = 0, sellAmt = 0;
+  trades.forEach(function(tr){
+    var amt = (toNum(tr.shares)||0)*(toNum(tr.price)||0), fee = toNum(tr.fee)||0;
+    if(tr.side === "sell") sellAmt += amt - fee; else buyAmt += amt + fee;
+  });
+
+  var html = '<div class="card-head"><h2>今日操作</h2>'+
+    '<div class="sp">'+
+      '<button class="btn buy sm" id="btn-add-buy">+ 买入</button>'+
+      '<button class="btn sell sm" id="btn-add-sell">+ 卖出</button>'+
+    '</div></div>';
+
+  if(!trades.length){
+    html += '<div class="empty">今天还没有买卖操作<p>点上面按钮记录买入或卖出</p></div>';
+  }else{
+    html += '<div class="tblwrap"><table><thead><tr>'+
+      '<th>方向</th><th>标的</th><th>数量</th><th>价格</th><th>手续费</th><th>金额</th><th>卖出盈亏</th><th>操作</th>'+
+      '</tr></thead><tbody>';
+    trades.forEach(function(tr, i){
+      var amt = (toNum(tr.shares)||0)*(toNum(tr.price)||0), fee = toNum(tr.fee)||0;
+      var isBuy = tr.side !== "sell";
+      var net = isBuy ? -(amt+fee) : (amt-fee);
+      var rz = info[tr.id] ? info[tr.id].realized : null;
+      html += '<tr>'+
+        '<td><span class="tag '+ (isBuy?"buy":"sell") +'">'+ (isBuy?"买入":"卖出") +'</span></td>'+
+        '<td><div class="name-cell"><b>'+esc(tr.name||"—")+'</b><span>'+esc(tr.secid||"未关联")+
+          (tr.note?(' · '+esc(tr.note)):'')+'</span></div></td>'+
+        '<td class="mono">'+trimNum(toNum(tr.shares)||0,4)+'</td>'+
+        '<td class="mono">'+trimNum(toNum(tr.price)||0,4)+'</td>'+
+        '<td class="mono">'+(fee?fmt(fee,2):"—")+'</td>'+
+        '<td class="mono '+clsOf(net)+'">'+signedMoney(net)+'</td>'+
+        '<td class="mono '+(rz===null?"flat":clsOf(rz))+'">'+(rz===null?"—":signedMoney(rz))+'</td>'+
+        '<td><button class="btn sm danger" data-deltrade="'+i+'">删除</button></td>'+
+      '</tr>';
+    });
+    html += '</tbody><tfoot class="tfoot"><tr><td colspan="5">合计</td>'+
+      '<td class="mono '+clsOf(sellAmt-buyAmt)+'">'+signedMoney(sellAmt-buyAmt)+'</td><td colspan="2"></td></tr></tfoot></table></div>';
+    html += '<div class="hint" style="margin-top:10px">买入支出 <b class="up mono">'+money(buyAmt)+'</b> · 卖出收入 <b class="down mono">'+
+            money(sellAmt)+'</b> · 净流入 <b class="mono '+clsOf(sellAmt-buyAmt)+'">'+signedMoney(sellAmt-buyAmt)+'</b></div>';
+  }
+  $("#card-trades").innerHTML = html;
+  var ab = $("#btn-add-buy"); if(ab) ab.addEventListener("click", function(){ openTrade("buy"); });
+  var as = $("#btn-add-sell"); if(as) as.addEventListener("click", function(){ openTrade("sell"); });
+  $$("#card-trades [data-deltrade]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var i = parseInt(this.getAttribute("data-deltrade"),10);
+      ensureDraft(ui.date).trades.splice(i,1);
+      markDirty(); renderDaily();
+    });
+  });
+}
+
+/* ==================== 每日记录：出入金 ==================== */
+function renderFlows(){
+  var draft = ensureDraft(ui.date);
+  var flows = draft.flows || [];
+  var net = flowNet(flows);
+  var html = '<div class="card-head"><h2>出入金</h2>'+
+    '<div class="sp">'+
+      '<button class="btn primary sm" id="btn-flow-in">+ 转入</button>'+
+      '<button class="btn sm" id="btn-flow-out">+ 转出</button>'+
+    '</div></div>';
+  if(!flows.length){
+    html += '<div class="empty">今天没有资金进出<p>买入卖出不算出入金，只有银行 ↔ 证券账户转账才算</p></div>';
+  }else{
+    html += '<div class="tblwrap"><table><thead><tr>'+
+      '<th>方向</th><th>金额</th><th>备注</th><th>操作</th></tr></thead><tbody>';
+    flows.forEach(function(f, i){
+      var a = toNum(f.amount) || 0;
+      html += '<tr>'+
+        '<td><span class="tag '+ (f.side === "out" ? "out" : "in") +'">'+ (f.side === "out" ? "转出" : "转入") +'</span></td>'+
+        '<td class="mono '+ (f.side === "out" ? "flat" : "up") +'">'+ (f.side === "out" ? "-" : "+") + money(a) +'</td>'+
+        '<td style="text-align:left">'+ (f.note ? esc(f.note) : '<span class="hint">—</span>') +'</td>'+
+        '<td><button class="btn sm danger" data-delflow="'+i+'">删除</button></td></tr>';
+    });
+    html += '</tbody><tfoot class="tfoot"><tr><td colspan="1">净额</td>'+
+      '<td class="mono '+clsOf(net)+'">'+signedMoney(net)+'</td><td colspan="2"></td></tr></tfoot></table></div>';
+  }
+  $("#card-flows").innerHTML = html;
+  var bi = $("#btn-flow-in"); if(bi) bi.addEventListener("click", function(){ openFlow("in"); });
+  var bo = $("#btn-flow-out"); if(bo) bo.addEventListener("click", function(){ openFlow("out"); });
+  $$("#card-flows [data-delflow]").forEach(function(b){
+    b.addEventListener("click", function(){
+      ensureDraft(ui.date).flows.splice(parseInt(this.getAttribute("data-delflow"),10), 1);
+      markDirty(); renderDaily();
+    });
+  });
+}
+
+/* ==================== 每日记录：分红送股 ==================== */
+function renderDivs(){
+  var draft = ensureDraft(ui.date);
+  var divs = draft.divs || [];
+  var r = replay(ui.date, pendingTrades(ui.date));
+  var html = '<div class="card-head"><h2>分红送股</h2>'+
+    '<div class="sp">'+
+      '<button class="btn sm" id="btn-add-div-cash">+ 现金分红</button>'+
+      '<button class="btn sm" id="btn-add-div-shares">+ 送股/转股</button>'+
+    '</div></div>';
+  if(!divs.length){
+    html += '<div class="empty">今天没有分红送股<p>现金分红会自动进入当天的可用现金建议；送股 / 转股会自动增加份额并摊薄成本价</p></div>';
+    $("#card-divs").innerHTML = html;
+  }else{
+    var cashSum = 0, shareSum = 0;
+    html += '<div class="tblwrap"><table><thead><tr>'+
+      '<th>类型</th><th>标的</th><th>依据</th><th>影响</th><th>备注</th><th>操作</th></tr></thead><tbody>';
+    divs.forEach(function(dv, i){
+      var info = r.div[dv.id] || null;
+      var add = info ? info.addShares : 0;
+      var baseShares = info ? Math.max(0, info.shares - add) : 0;
+      var basis = dv.mode === "total"
+        ? (dv.kind === "cash" ? ("总额 " + money(toNum(dv.amount)||0)) : ("共 " + trimNum(toNum(dv.shares)||0,4) + " 股"))
+        : ("每 10 股 " + trimNum(toNum(dv.per10)||0,4) + " " + divPer10Unit(dv.kind));
+      var impact = "";
+      if(dv.kind === "cash"){
+        var amt = info ? info.amount : 0;
+        cashSum += amt;
+        impact = '<span class="up mono">+'+money(amt)+'</span>';
+      }else{
+        shareSum += add;
+        var costAfter = info ? info.cost : 0;
+        var costBefore = (info && info.prevShares > 0) ? info.prevCost : 0;
+        impact = '<span class="mono">+'+trimNum(add,4)+' 股</span>'+
+                 '<br><span class="hint">成本 '+trimNum(costBefore,4)+' → '+trimNum(costAfter,4)+'</span>';
+      }
+      html += '<tr>'+
+        '<td><span class="tag '+(dv.kind === "cash" ? "in" : "buy")+'">'+divKindLabel(dv.kind)+'</span></td>'+
+        '<td><div class="name-cell"><b>'+esc(dv.name||"—")+'</b><span>'+esc(dv.secid||"未关联")+'</span></div></td>'+
+        '<td class="mono">'+basis+'</td>'+
+        '<td class="mono">'+impact+'</td>'+
+        '<td style="text-align:left">'+(dv.note ? esc(dv.note) : '<span class="hint">—</span>')+'</td>'+
+        '<td><button class="btn sm danger" data-deldiv="'+i+'">删除</button></td></tr>';
+    });
+    html += '</tbody><tfoot class="tfoot"><tr><td colspan="3">合计</td>'+
+      '<td class="mono"><span class="up">+'+money(cashSum)+'</span> · <span class="mono">'+trimNum(shareSum,4)+' 股</span></td>'+
+      '<td colspan="2"></td></tr></tfoot></table></div>';
+    $("#card-divs").innerHTML = html;
+  }
+  var bc = $("#btn-add-div-cash"); if(bc) bc.addEventListener("click", function(){ openDiv("cash"); });
+  var bs = $("#btn-add-div-shares"); if(bs) bs.addEventListener("click", function(){ openDiv("shares"); });
+  $$("#card-divs [data-deldiv]").forEach(function(b){
+    b.addEventListener("click", function(){
+      ensureDraft(ui.date).divs.splice(parseInt(this.getAttribute("data-deldiv"),10), 1);
+      markDirty(); renderDaily();
+    });
+  });
+}
+
+/* ==================== 每日记录：价格 ==================== */
+function renderPrices(){
+  var draft = ensureDraft(ui.date);
+  var date = ui.date, draftPrices = draft.prices;
+
+  var html = '<div class="card-head"><h2>持仓价格</h2>'+
+    '<div class="sp">'+
+      '<button class="btn primary sm" id="btn-fetch">⚡ 抓取最新价</button>'+
+      '<button class="btn sm" id="btn-copy-prev">沿用上次价格</button>'+
+      '<span class="hint" id="fetch-status"></span>'+
+    '</div></div>';
+
+  if(!state.holdings.length){
+    html += '<div class="empty">还没有持仓<p>先添加股票或基金</p><button class="btn primary" data-jump="holdings">去添加持仓</button></div>';
+    $("#card-prices").innerHTML = html; return;
+  }
+  var r = replay(date, pendingTrades(date)).pos;
+  html += '<div class="tblwrap"><table><thead><tr>'+
+    '<th>持仓</th><th>份额</th><th>成本价</th><th>今日价格</th><th>市值</th><th>盈亏</th><th>行情</th></tr></thead><tbody>';
+  var tv=0, tc=0, any=false;
+  state.holdings.forEach(function(h){
+    var pos = r[h.id] || { shares:0, cost:0 };
+    var p = priceFor(h, draftPrices, date);
+    var v = p === null ? null : pos.shares*p;
+    var c = pos.shares*pos.cost;
+    if(v !== null){ tv += v; tc += c; any = true; }
+    var profit = v === null ? null : v-c;
+    var q = quoteOf(h);
+    var qtxt = !hasSec(h) ? '<span class="hint">未关联</span>'
+             : (q ? '<span class="hint">'+esc(q.time||"—")+'</span>' : '<span class="hint">—</span>');
+    html += '<tr>'+
+      '<td><div class="name-cell"><b>'+esc(h.name)+typeTag(h.type)+'</b><span>'+esc(secidOf(h)||"—")+'</span></div></td>'+
+      '<td class="mono">'+fmt(pos.shares, pos.shares%1?4:0)+'</td>'+
+      '<td class="mono">'+trimNum(pos.cost,4)+'</td>'+
+      '<td><input class="price mono" type="number" step="0.0001" min="0" data-price="'+h.id+'" value="'+esc(draftPrices[h.id])+'" placeholder="输入价格"></td>'+
+      '<td class="mono">'+(v===null?'<span class="flat">—</span>':money(v,2))+'</td>'+
+      '<td class="mono '+(profit===null?"flat":clsOf(profit))+'">'+(profit===null?"—":signedMoney(profit,2))+'</td>'+
+      '<td>'+qtxt+'</td></tr>';
+  });
+  html += '</tbody>';
+  if(any){
+    var tp = tv-tc;
+    html += '<tfoot class="tfoot"><tr><td>合计</td><td></td><td></td><td></td>'+
+      '<td class="mono">'+money(tv)+'</td><td class="mono '+clsOf(tp)+'">'+signedMoney(tp)+'</td><td></td></tr></tfoot>';
+  }
+  html += '</table></div>';
+  if(computeTotals(draftPrices, date, pendingTrades(date)).missing){
+    html += '<div class="hint" style="margin-top:8px">未填价格的持仓按最近一次记录的价格估算。</div>';
+  }
+  $("#card-prices").innerHTML = html;
+
+  $$("#card-prices input[data-price]").forEach(function(inp){
+    inp.addEventListener("input", function(){
+      draftPrices[this.getAttribute("data-price")] = this.value;
+      markDirty(); refreshTotalRows();
+    });
+  });
+  var fb = $("#btn-fetch"); if(fb) fb.addEventListener("click", function(){ fetchAndFill(false); });
+  var cb = $("#btn-copy-prev"); if(cb) cb.addEventListener("click", copyPrevPrices);
+}
+function typeTag(t){ return '<span class="tag '+esc(t||"other")+'">'+typeLabel(t)+'</span>'; }
+function refreshTotalRows(){
+  var draft = ensureDraft(ui.date);
+  var t = computeTotals(draft.prices, ui.date, pendingTrades(ui.date));
+  var foot = $("#card-prices .tfoot td.mono");
+  if(foot && foot.length >= 2){
+    foot[0].textContent = money(t.value);
+    foot[1].textContent = signedMoney(t.profit);
+    foot[1].className = "mono " + clsOf(t.profit);
+  }
+  renderCash();
+  renderHeader();
+}
+function renderFetchStatus(){
+  var el = $("#fetch-status"); if(!el) return;
+  if(QUOTE.fetching){ el.innerHTML = '<span class="spin"></span>抓取中…'; return; }
+  var n = state.holdings.filter(hasSec).length;
+  if(!n){ el.textContent = ""; return; }
+  if(QUOTE.err){ el.innerHTML = '<span class="warnc">行情失败：'+esc(QUOTE.err)+'</span>'; return; }
+  if(QUOTE.ts){
+    var ok = state.holdings.filter(function(h){ return quotePrice(h) !== null; }).length;
+    el.innerHTML = '<span class="hint">'+ok+'/'+n+' · '+new Date(QUOTE.ts).toLocaleTimeString("zh-CN",{hour12:false})+'</span>';
+    return;
+  }
+  el.innerHTML = '<span class="hint">可自动填充价格</span>';
+}
+
+/* ==================== 每日记录：现金 ==================== */
+function renderCash(){
+  var draft = ensureDraft(ui.date);
+  var cur = toNum(draft.cash);
+  var st = cashStatus(ui.date, isFinite(cur)?cur:null, draft.trades, draft.flows, draft.divs);
+  var t = computeTotals(draft.prices, ui.date, pendingTrades(ui.date));
+  var cashVal = isFinite(cur) ? cur : 0;
+
+  var html = '<div class="card-head"><h2>可用现金</h2>'+
+    '<div class="sp"><span class="hint">当日收盘后的可用资金余额</span></div></div>';
+
+  if(st.has){
+    html += '<div class="hint" style="margin-bottom:10px">上一记录日（'+st.baseDate+'）余额 <b class="mono">'+money(st.base)+'</b>'
+      + (st.net ? (' ＋ 操作净额 <b class="mono '+clsOf(st.net)+'">'+signedMoney(st.net)+'</b>') : '')
+      + (st.flow ? (' ＋ 出入金净额 <b class="mono '+clsOf(st.flow)+'">'+signedMoney(st.flow)+'</b>') : '')
+      + (st.div ? (' ＋ 现金分红 <b class="mono up">+'+money(st.div)+'</b>') : '')
+      + ' ＝ 建议余额 <b class="mono">'+money(st.suggest)+'</b> '
+      + '<button class="btn sm" id="btn-use-suggest">采用</button></div>';
+  }else{
+    html += '<div class="hint" style="margin-bottom:10px">第一次记录现金余额，请直接填写当前可用资金；之后每天会自动带上建议值。</div>';
+  }
+  html += '<div class="grid2"><div class="field"><label>可用现金余额</label>'+
+    '<input id="cash-input" class="mono" type="number" step="0.01" placeholder="例如 35000.00" value="'+esc(draft.cash)+'"></div>'+
+    '<div class="field"><label>当日总资产</label><input class="mono" readonly value="'+money(t.value + cashVal)+'"></div></div>';
+
+  html += '<div class="row-inline" style="margin-top:6px">'+
+    '<button class="btn primary" id="btn-save-day">保存当日记录</button>'+
+    ((state.days[ui.date] && state.days[ui.date].totals) ? '<button class="btn danger" id="btn-del-day">删除当日记录</button>' : '')+
+    '<span style="flex:1"></span>'+
+    (function(){
+      var rec = state.days[ui.date];
+      if(rec && rec.totals) return '<span class="hint">✅ 已保存 · '+new Date(rec.savedAt||Date.now()).toLocaleString("zh-CN",{hour12:false})+'</span>';
+      return '<span class="hint">尚未保存这一天的记录</span>';
+    })()+
+  '</div>';
+  $("#card-cash").innerHTML = html;
+
+  var ci = $("#cash-input");
+  ci.addEventListener("input", function(){
+    draft.cash = this.value;
+    markDirty();
+    var cur2 = toNum(this.value);
+    var box = $("#card-cash .field input[readonly]");
+    if(box) box.value = money(t.value + (isFinite(cur2)?cur2:0));
+    renderHeader();
+  });
+  var us = $("#btn-use-suggest");
+  if(us) us.addEventListener("click", function(){
+    draft.cash = st.suggest;
+    markDirty(); renderCash();
+  });
+  var sb = $("#btn-save-day"); if(sb) sb.addEventListener("click", saveDay);
+  var db = $("#btn-del-day"); if(db) db.addEventListener("click", delDay);
+}
+
+/* ==================== 每日记录：主入口 ==================== */
+function renderDaily(){
+  $("#daily-date").value = ui.date;
+  renderTrades();
+  renderFlows();
+  renderDivs();
+  renderPrices();
+  renderCash();
+  renderFetchStatus();
+  renderDirty();
+  maybeAutoFetch();
+}
+function maybeAutoFetch(){
+  if(!state.settings.autoFetch || QUOTE.fetching) return;
+  if(ui.autoFetchedFor === ui.date) return;
+  if(ui.date !== todayStr()) return;
+  if(state.days[ui.date] && state.days[ui.date].totals) return;
+  if(!state.holdings.some(hasSec)) return;
+  ui.autoFetchedFor = ui.date;
+  fetchAndFill(true);
+}
+function fetchAndFill(silent){
+  if(QUOTE.fetching) return;
+  if(!state.holdings.some(hasSec)){ if(!silent) toast("还没有持仓关联代码"); return; }
+  QUOTE.fetching = true; renderFetchStatus();
+  ensureQuotes(true).then(function(){
+    var draft = ensureDraft(ui.date), n = 0, miss = [];
+    state.holdings.forEach(function(h){
+      var p = quotePrice(h);
+      if(p !== null){ draft.prices[h.id] = p; n++; }
+      else if(hasSec(h)) miss.push(h.name);
+    });
+    QUOTE.fetching = false;
+    if(n) markDirty();
+    renderDaily(); renderHeader();
+    if(!silent || miss.length) toast(n ? ("已抓取 "+n+" 个最新价"+(miss.length?("，"+miss.length+" 个失败"):"")) : "未获取到行情");
+    if(!silent) logCommit("quote", "抓取最新价",
+      n + " 个成功" + (miss.length ? (" · " + miss.length + " 个失败：" + miss.join("、")) : ""));
+  }).catch(function(err){
+    QUOTE.fetching = false;
+    renderFetchStatus();
+    toast("抓取失败：" + (err.message || "网络异常"));
+    if(!silent) logCommit("quote", "抓取最新价失败", err.message || "网络异常");
+  });
+}
+function saveDay(){
+  var date = ui.date, draft = ensureDraft(date);
+  takeSnapshot("保存 " + date);
+  var prices = {};
+  state.holdings.forEach(function(h){
+    var p = toNum(draft.prices[h.id]);
+    if(isFinite(p) && p >= 0) prices[h.id] = p;
+  });
+  var trades = (draft.trades || []).filter(function(tr){ return (toNum(tr.shares)||0) > 0; });
+  var flows = (draft.flows || []).filter(function(f){ return (toNum(f.amount)||0) > 0; });
+  var divs = (draft.divs || []).filter(function(dv){
+    return (toNum(dv.per10)||0) > 0 || (toNum(dv.amount)||0) > 0 || (toNum(dv.shares)||0) > 0;
+  });
+  var cash = toNum(draft.cash);
+  if(!Object.keys(prices).length && !trades.length && !flows.length && !divs.length && !isFinite(cash)){
+    toast("请至少填写价格、操作、出入金、分红送股或现金"); return;
+  }
+  // 为没有关联持仓的操作自动建仓
+  trades.forEach(function(tr){
+    if(tr.holdingId && holdingById(tr.holdingId)) return;
+    var h = findByTrade(tr);
+    if(!h){
+      h = { id:uid(), name:tr.name, code:tr.code||"", market:tr.market||"", type:tr.type||"stock",
+            baseShares:0, baseCost:0, createdAt:Date.now() };
+      state.holdings.push(h);
+    }
+    tr.holdingId = h.id;
+  });
+  state.days[date] = {
+    prices: prices,
+    trades: trades,
+    flows: flows,
+    divs: divs,
+    cash: isFinite(cash) ? cash : null,
+    totals: null,
+    savedAt: Date.now()
+  };
+  var t = computeTotals(prices, date);
+  state.days[date].totals = { value:t.value, cost:t.cost, profit:t.profit, profitPct:t.profitPct };
+  logAdd("daily", "保存 " + date + " 记录",
+    "市值 " + money(t.value) + " · 浮动盈亏 " + signedMoney(t.profit) + " · 现金 " + (isFinite(cash) ? money(cash) : "未记录") +
+    " · 价格 " + Object.keys(prices).length + " 个" +
+    (trades.length ? (" · 买卖 " + trades.length + " 笔") : "") +
+    (flows.length ? (" · 出入金 " + flows.length + " 笔") : "") +
+    (divs.length ? (" · 分红送股 " + divs.length + " 笔") : ""));
+  ui.dirty = false;
+  delete ui.draft[date];
+  save(); toast("已保存 " + date + " 的记录"); renderAll();
+}
+function delDay(){
+  takeSnapshot("删除 " + ui.date);
+  if(!confirm("确定删除 " + ui.date + " 的记录？\n当天的买卖操作也会一并删除，持仓份额会相应回滚。")) return;
+  delete state.days[ui.date]; delete ui.draft[ui.date];
+  logAdd("daily", "删除 " + ui.date + " 记录", "当天的买卖、出入金、分红送股一并删除");
+  ui.dirty = false; save(); toast("已删除"); renderAll();
+}
+function copyPrevPrices(){
+  var date = ui.date, prev = prevRecordDate(date) || sortedDates().pop();
+  if(!prev){ toast("没有可复制的历史记录"); return; }
+  var draft = ensureDraft(date), src = state.days[prev].prices || {}, n = 0;
+  state.holdings.forEach(function(h){
+    var v = src[h.id];
+    if(v === undefined){ var lp = lastKnownPrice(h.id, date); v = lp ? lp.price : undefined; }
+    if(v !== undefined){ draft.prices[h.id] = v; n++; }
+  });
+  markDirty(); toast("已从 " + prev + " 带入 " + n + " 个价格"); renderDaily();
+  logCommit("daily", "沿用历史价格", "从 " + prev + " 带入 " + n + " 个价格（还没保存）");
+}
+
+/* ==================== 弹窗防误关 ==================== */
+/* 弹窗里填了东西还没点保存就关闭（点空白处 / 按 Esc / 点取消）→ 先确认，避免静默丢数据 */
+var modalBase = {};
+function modalSig(id){
+  var root = document.getElementById(id);
+  if(!root) return "";
+  var els = root.querySelectorAll("input,select,textarea"), out = [];
+  for(var i=0;i<els.length;i++){
+    var e = els[i];
+    if(e.type === "checkbox" || e.type === "radio") out.push(e.checked ? "1" : "0");
+    else out.push(String(e.value == null ? "" : e.value));
+  }
+  return out.join("\u0001");
+}
+function snapModal(id){ modalBase[id] = modalSig(id); }
+function guardModal(id, close){
+  var root = document.getElementById(id);
+  if(!root || root.hidden || modalBase[id] === undefined || modalSig(id) === modalBase[id]){ close(); return; }
+  var ok = true;
+  try{ ok = confirm("这个弹窗里还有没保存的内容，关掉就会丢掉。\n\n确定要放弃吗？（点「取消」可以回去继续填）"); }catch(e){}
+  if(ok) close();
+}
+
+/* ==================== 交易弹窗 ==================== */
+function openTrade(side){
+  tSide = side || "buy"; tPicked = null;
+  $("#tmodal-title").textContent = (side === "sell" ? "记录卖出" : "记录买入") + " · " + ui.date;
+  $("#t-sec").value = ""; $("#t-shares").value = ""; $("#t-price").value = "";
+  $("#t-fee").value = ""; $("#t-note").value = "";
+  setSide(side); hideAc(); renderChips(); updateTradePreview();
+  $("#tmodal").hidden = false; snapModal("tmodal");
+  setTimeout(function(){
+    if(state.holdings.length){ $("#t-shares").focus(); } else { $("#t-sec").focus(); }
+  }, 30);
+}
+function setSide(side){
+  tSide = side;
+  $$("#t-side button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-side") === side); });
+  var btn = $("#t-save"); if(btn) btn.textContent = (side === "sell" ? "添加卖出" : "添加买入");
+}
+function closeTrade(){ $("#tmodal").hidden = true; tPicked = null; hideAc(); }
+function renderChips(){
+  var el = $("#t-chips"); if(!el) return;
+  if(!state.holdings.length){
+    el.innerHTML = '<span class="hint">还没有持仓，直接搜索名称 / 代码即可（保存时会自动建仓）</span>'; return;
+  }
+  var html = '<span class="hint" style="margin-right:2px">快速选择：</span>';
+  state.holdings.slice(0, 8).forEach(function(h){
+    var pos = posOf(h, null);
+    html += '<button type="button" class="chip" data-chip="'+h.id+'">'+esc(h.name)+' <span class="mono" style="color:var(--muted)">'+fmt(pos.shares, pos.shares%1?2:0)+'</span></button>';
+  });
+  el.innerHTML = html;
+  $$("#t-chips [data-chip]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var h = holdingById(this.getAttribute("data-chip"));
+      if(!h) return;
+      tPicked = { secid:secidOf(h), market:h.market, code:h.code, name:h.name, raw:"", holdingId:h.id };
+      $("#t-sec").value = h.name;
+      var lp = lastKnownPrice(h.id, null), qp = quotePrice(h);
+      $("#t-price").value = qp !== null ? qp : (lp ? lp.price : "");
+      updateTradePreview();
+      $("#t-shares").focus();
+    });
+  });
+}
+function updateTradePreview(){
+  var sh = toNum($("#t-shares").value), pr = toNum($("#t-price").value), fee = toNum($("#t-fee").value) || 0;
+  var el = $("#t-preview"); if(!el) return;
+  if(!isFinite(sh) || !isFinite(pr)){ el.textContent = "金额：—"; return; }
+  var amt = sh*pr;
+  var txt = (tSide === "sell" ? "卖出收入 " : "买入支出 ") +
+    (tSide === "sell" ? money(amt-fee) : money(amt+fee));
+  if(tPicked){
+    var h = tPicked.holdingId ? holdingById(tPicked.holdingId) : findByTrade(tPicked);
+    if(h){
+      var pos = posOf(h, null);
+      if(tSide === "sell"){
+        txt += " · 当前持有 " + fmt(pos.shares,4) + "，卖出后剩 " + fmt(Math.max(0,pos.shares-sh),4);
+        if(sh > pos.shares + 1e-9) txt += " ⚠️ 卖出数量超过持仓";
+        txt += " · 预计盈亏 " + signedMoney(sh*pr - fee - sh*pos.cost);
+      }else{
+        var ns = pos.shares + sh;
+        txt += " · 买入后 " + fmt(ns,4) + "，成本价 " + trimNum(ns>0 ? (pos.shares*pos.cost + amt + fee)/ns : 0, 4);
+      }
+    }
+  }
+  el.textContent = txt;
+}
+function saveTrade(){
+  var name = $("#t-sec").value.trim();
+  var shares = toNum($("#t-shares").value), price = toNum($("#t-price").value);
+  var fee = toNum($("#t-fee").value); fee = isFinite(fee) ? fee : 0;
+  var note = $("#t-note").value.trim();
+  if(!name){ toast("请选择或输入标的"); return; }
+  if(!isFinite(shares) || shares <= 0){ toast("请填写正确的数量"); return; }
+  if(!isFinite(price) || price < 0){ toast("请填写正确的价格"); return; }
+
+  var go;
+  if(tPicked && tPicked.name === name){ go = Promise.resolve(tPicked); }
+  else go = resolveSecurity(name, "").then(function(sec){
+    return sec || { name:name, code:"", market:"", raw:"" };
+  });
+  var btn = $("#t-save"); btn.disabled = true; var old = btn.textContent; btn.textContent = "处理中…";
+  go.then(function(sec){
+    btn.disabled = false; btn.textContent = old;
+    var matched = findByTrade({ secid:sec.secid, code:sec.code, market:sec.market, name:sec.name });
+    var tr = {
+      id: uid(),
+      holdingId: (tPicked && tPicked.holdingId) || (matched ? matched.id : ""),
+      secid: sec.secid || "", code: sec.code || "", market: sec.market || "",
+      name: sec.name || name, type: mapType(sec.raw) === "other" ? "stock" : mapType(sec.raw),
+      side: tSide, shares: shares, price: price, fee: fee, note: note, ts: Date.now()
+    };
+    ensureDraft(ui.date).trades.push(tr);
+    logCommit("trade", (tSide === "sell" ? "卖出 " : "买入 ") + tr.name,
+      trimNum(shares,4) + " 股 @ " + trimNum(price,4) +
+      (fee ? (" · 手续费 " + money(fee)) : "") + " · " +
+      (tSide === "sell" ? ("收入 " + money(shares*price - fee)) : ("支出 " + money(shares*price + fee))) +
+      (note ? (" · " + note) : "") + " · 日期 " + ui.date);
+    markDirty(); closeTrade(); renderDaily();
+    toast((tSide === "sell" ? "已记录卖出 " : "已记录买入 ") + tr.name + "（记得保存当日记录）");
+  }).catch(function(){ btn.disabled = false; btn.textContent = old; toast("保存失败，请重试"); });
+}
+
+/* ==================== 出入金弹窗 ==================== */
+var flSide = "in";
+function openFlow(side){
+  flSide = side || "in";
+  $("#fmodal-title").textContent = (flSide === "out" ? "记录转出" : "记录转入") + " · " + ui.date;
+  $("#fl-amount").value = ""; $("#fl-note").value = "";
+  setFlSide(flSide);
+  $("#fmodal").hidden = false; snapModal("fmodal");
+  setTimeout(function(){ $("#fl-amount").focus(); }, 30);
+}
+function setFlSide(side){
+  flSide = side;
+  $$("#fl-side button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-side") === side); });
+  var btn = $("#fl-save"); if(btn) btn.textContent = (side === "out" ? "添加转出" : "添加转入");
+  var t = $("#fmodal-title");
+  if(t) t.textContent = (side === "out" ? "记录转出" : "记录转入") + " · " + ui.date;
+}
+function closeFlow(){ $("#fmodal").hidden = true; }
+function saveFlow(){
+  var amt = toNum($("#fl-amount").value);
+  var note = $("#fl-note").value.trim();
+  if(!isFinite(amt) || amt <= 0){ toast("请填写正确的金额"); return; }
+  ensureDraft(ui.date).flows.push({ id:uid(), side:flSide, amount:amt, note:note, ts:Date.now() });
+  logCommit("flow", (flSide === "out" ? "转出 " : "转入 ") + money(amt),
+    ui.date + (note ? (" · " + note) : ""));
+  markDirty(); closeFlow(); renderDaily();
+  toast((flSide === "out" ? "已记录转出 " : "已记录转入 ") + money(amt) + "（记得保存当日记录）");
+}
+
+/* ==================== 分红送股弹窗 ==================== */
+function openDiv(kind){
+  dKind = kind || "cash"; dMode = "per"; dPicked = null;
+  $("#d-filter").value = ""; $("#d-value").value = ""; $("#d-note").value = "";
+  setDivKind(dKind); setDivMode("per"); renderDivChips(); updateDivPreview();
+  $("#dmodal").hidden = false; snapModal("dmodal");
+  setTimeout(function(){ $("#d-value").focus(); }, 30);
+}
+function closeDiv(){ $("#dmodal").hidden = true; dPicked = null; }
+function setDivKind(kind){
+  dKind = kind;
+  $$("#d-kind button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-kind") === kind); });
+  var t = $("#dmodal-title"); if(t) t.textContent = "记录" + divKindLabel(dKind) + " · " + ui.date;
+  updateDivLabels(); updateDivPreview();
+}
+function setDivMode(mode){
+  dMode = mode;
+  $$("#d-mode button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-mode") === mode); });
+  updateDivLabels(); updateDivPreview();
+}
+function updateDivLabels(){
+  var lab = $("#d-value-label"), inp = $("#d-value");
+  if(!lab || !inp) return;
+  if(dMode === "per"){
+    lab.textContent = "每 10 股" + (dKind === "cash" ? "派息（元）*" : "送转（股）*");
+    inp.placeholder = dKind === "cash" ? "例如 3.5" : "例如 4";
+  }else{
+    lab.textContent = dKind === "cash" ? "现金分红总额（元）*" : "新增股数（股）*";
+    inp.placeholder = dKind === "cash" ? "例如 3500" : "例如 400";
+  }
+}
+function renderDivChips(){
+  var el = $("#d-chips"); if(!el) return;
+  if(!state.holdings.length){
+    el.innerHTML = '<span class="hint">还没有持仓，先到「持仓管理」里添加</span>'; return;
+  }
+  var q = ($("#d-filter").value || "").trim().toLowerCase();
+  var list = state.holdings.filter(function(h){
+    if(!q) return true;
+    return (h.name||"").toLowerCase().indexOf(q) >= 0 || (h.code||"").toLowerCase().indexOf(q) >= 0 ||
+           (secidOf(h)||"").toLowerCase().indexOf(q) >= 0;
+  });
+  if(!list.length){ el.innerHTML = '<span class="hint">没有匹配的持仓</span>'; return; }
+  el.innerHTML = list.map(function(h){
+    var pos = posOf(h, ui.date, pendingTrades(ui.date));
+    return '<button type="button" class="chip'+(dPicked===h.id?" on":"")+'" data-dpick="'+h.id+'">'+esc(h.name)+
+      ' <span class="mono" style="color:var(--muted)">'+fmt(pos.shares, pos.shares%1?2:0)+'</span></button>';
+  }).join("");
+  $$("#d-chips [data-dpick]").forEach(function(b){
+    b.addEventListener("click", function(){
+      dPicked = this.getAttribute("data-dpick");
+      renderDivChips(); updateDivPreview();
+    });
+  });
+}
+// 当天分红送股“登记日”的份额（不含当天已录入的分红送股）
+function divBaseShares(){
+  if(!dPicked) return 0;
+  var r = replay(ui.date, { date:ui.date, trades:(ensureDraft(ui.date).trades || []), divs:[] });
+  var p = r.pos[dPicked];
+  return p ? p.shares : 0;
+}
+function updateDivPreview(){
+  var el = $("#d-preview"); if(!el) return;
+  if(!dPicked){ el.textContent = "影响：先选一个持仓"; return; }
+  var h = holdingById(dPicked); if(!h){ el.textContent = "影响：—"; return; }
+  var v = toNum($("#d-value").value);
+  var shares = divBaseShares();
+  var dv = { kind:dKind, mode:dMode, per10:(dMode==="per"?v:0),
+             amount:(dMode==="total"&&dKind==="cash"?v:0), shares:(dMode==="total"&&dKind==="shares"?v:0) };
+  var amt = divAmounts(dv, shares);
+  var txt = esc(h.name) + " · 登记份额 " + fmt(shares, shares%1?4:0) + " 股 · ";
+  if(dKind === "cash"){
+    txt += "现金分红 <b class=\"up mono\">" + money(isFinite(amt)?amt:0) + "</b>，将加进当天可用现金建议";
+  }else{
+    var after = shares + (isFinite(amt)?amt:0);
+    var pos = posOf(h, ui.date, pendingTrades(ui.date));
+    var newCost = after > 0 ? (shares*pos.cost)/after : 0;
+    txt += "新增 <b class=\"mono\">" + trimNum(isFinite(amt)?amt:0,4) + "</b> 股 → 共 " + fmt(after, after%1?4:0) +
+           " 股，成本价 " + trimNum(pos.cost,4) + " → <b class=\"mono\">" + trimNum(newCost,4) + "</b>";
+  }
+  el.innerHTML = "影响：" + txt;
+}
+function saveDiv(){
+  if(!dPicked){ toast("请先选择持仓"); return; }
+  var h = holdingById(dPicked);
+  if(!h){ toast("持仓不存在"); return; }
+  var v = toNum($("#d-value").value);
+  if(!isFinite(v) || v <= 0){ toast("请填写正确的数值"); return; }
+  var dv = { id:uid(), holdingId:h.id, secid:secidOf(h), code:h.code||"", market:h.market||"",
+             name:h.name, type:h.type||"stock", kind:dKind, mode:dMode,
+             per10: dMode==="per" ? v : 0,
+             amount: (dMode==="total" && dKind==="cash") ? v : 0,
+             shares: (dMode==="total" && dKind==="shares") ? v : 0,
+             note: $("#d-note").value.trim(), ts:Date.now() };
+  ensureDraft(ui.date).divs.push(dv);
+  logCommit("div", divKindLabel(dKind) + " · " + h.name,
+    (dMode === "per" ? ("每 10 股 " + trimNum(v,4) + (dKind === "cash" ? " 元" : " 股"))
+                     : (dKind === "cash" ? ("总额 " + money(v)) : ("共 " + trimNum(v,4) + " 股"))) +
+    " · 日期 " + ui.date);
+  markDirty(); closeDiv(); renderDaily();
+  toast("已添加" + divKindLabel(dKind) + "（记得保存当日记录）");
+}
+
+/* ==================== 联想（共用） ==================== */
+function hideAc(target){
+  var el = $("#" + (target === "trade" ? "t-ac" : "f-ac"));
+  if(el){ el.hidden = true; el.innerHTML = ""; }
+  acResults = []; acIndex = -1; acTarget = null;
+  acSeq++;
+}
+function renderAc(list, loading, err){
+  var el = $("#" + (acTarget === "trade" ? "t-ac" : "f-ac"));
+  if(!el) return;
+  acResults = list || []; acIndex = acResults.length ? 0 : -1;
+  var html = "";
+  if(loading) html += '<div class="ac-note"><span class="spin"></span>搜索中…</div>';
+  if(err) html += '<div class="ac-note">'+esc(err)+'</div>';
+  (list||[]).forEach(function(s, i){
+    html += '<div class="ac-item'+(i===0?" on":"")+'" data-i="'+i+'">'+
+      '<span class="n">'+esc(s.name)+'</span><span class="c mono">'+esc(s.code)+'</span>'+
+      '<span class="m">'+esc(marketLabel(s.market))+'</span>'+
+      '<span class="m">'+esc(typeLabel(mapType(s.raw)))+'</span></div>';
+  });
+  if(!loading && !err && !(list||[]).length) html += '<div class="ac-note">没有匹配结果</div>';
+  el.innerHTML = html; el.hidden = false;
+  $$("#"+el.id+" .ac-item").forEach(function(it){
+    it.addEventListener("mousedown", function(ev){ ev.preventDefault(); pickAc(parseInt(this.getAttribute("data-i"),10)); });
+    it.addEventListener("mouseenter", function(){ setAcIndex(parseInt(this.getAttribute("data-i"),10)); });
+  });
+}
+function setAcIndex(i){
+  acIndex = i;
+  var el = $("#" + (acTarget === "trade" ? "t-ac" : "f-ac"));
+  if(el) $$(".ac-item", el).forEach(function(it, k){ it.classList.toggle("on", k === i); });
+}
+function pickAc(i){
+  var s = acResults[i]; if(!s) return;
+  if(acTarget === "trade"){
+    var h = findByTrade({ secid:s.secid, code:s.code, market:s.market, name:s.name });
+    tPicked = { secid:s.secid, market:s.market, code:s.code, name:s.name, raw:s.raw, holdingId:h ? h.id : "" };
+    $("#t-sec").value = s.name;
+    var lp = h ? lastKnownPrice(h.id, null) : null, qp = h ? quotePrice(h) : null;
+    if(!$("#t-price").value) $("#t-price").value = qp !== null ? qp : (lp ? lp.price : "");
+    hideAc(); updateTradePreview(); $("#t-shares").focus();
+  }else{
+    pickedSec = s;
+    $("#f-search").value = s.name;
+    $("#f-code").value = s.code;
+    $("#f-type").value = mapType(s.raw);
+    hideAc(); renderPicked();
+  }
+}
+function doSearch(q, target){
+  acTarget = target;
+  var seq = ++acSeq;
+  renderAc([], true, "");
+  searchSecurities(q).then(function(list){
+    if(seq === acSeq && acTarget === target) renderAc(list, false, "");
+  }).catch(function(err){
+    if(seq === acSeq && acTarget === target) renderAc(searchStatic(q), false, err.message || "搜索失败");
+  });
+}
+
+/* ==================== 持仓管理 ==================== */
+function renderHoldings(){
+  var body = $("#holdings-body");
+  if(!state.holdings.length){
+    body.innerHTML = '<div class="empty">还没有持仓<p>点击右上角「新增持仓」开始记账</p></div>';
+    return;
+  }
+  var r = replay(null).pos;
+  var html = '<div class="tblwrap"><table><thead><tr>'+
+    '<th>持仓</th><th>当前份额</th><th>成本价</th><th>最新价</th><th>市值</th><th>浮动盈亏</th><th>已实现</th><th>累计分红</th><th>操作</th>'+
+    '</tr></thead><tbody>';
+  var tv=0, tc=0, realized=0, divTotal=0;
+  state.holdings.forEach(function(h){
+    var pos = r[h.id] || { shares:baseOf(h).shares, cost:baseOf(h).cost, realized:0, buys:0, sells:0 };
+    var q = quoteOf(h), price = quotePrice(h);
+    var lp = price === null ? lastKnownPrice(h.id, null) : null;
+    var used = price !== null ? price : (lp ? lp.price : null);
+    var v = used === null ? null : pos.shares*used;
+    var c = pos.shares*pos.cost;
+    var profit = v === null ? null : v-c;
+    var rate = (profit !== null && c > 0) ? profit/c*100 : null;
+    if(v !== null){ tv += v; tc += c; }
+    realized += pos.realized;
+    divTotal += (pos.divCash || 0) + 0;
+    var base = baseOf(h);
+    var adjusted = (pos.buys || pos.sells);
+    var srcTxt = q ? ((q.kind === "fund" ? "净值 " : "") + (q.time||"")) : (lp ? ("记录 "+lp.date) : "未获取");
+    html += '<tr>'+
+      '<td><div class="name-cell"><b>'+esc(h.name)+typeTag(h.type)+'</b><span>'+esc(secidOf(h)||"—")+
+        (adjusted ? (' · 交易 '+pos.buys+'买/'+pos.sells+'卖') : '')+'</span></div></td>'+
+      '<td class="mono">'+fmt(pos.shares, pos.shares%1?4:0)+
+        (adjusted ? '<br><span class="hint">初始 '+fmt(base.shares, base.shares%1?4:0)+'</span>' : '')+'</td>'+
+      '<td class="mono">'+trimNum(pos.cost,4)+
+        (adjusted ? '<br><span class="hint">初始 '+trimNum(base.cost,4)+'</span>' : '')+'</td>'+
+      '<td class="mono">'+(used===null?'<span class="flat">—</span>':trimNum(used,4))+'</td>'+
+      '<td class="mono">'+(v===null?'<span class="flat">—</span>':money(v))+'</td>'+
+      '<td class="mono '+(profit===null?"flat":clsOf(profit))+'">'+(profit===null?"—":signedMoney(profit))+
+        (rate===null?'':'<br><span class="hint">'+pctStr(rate)+'</span>')+'</td>'+
+      '<td class="mono '+clsOf(pos.realized)+'">'+(pos.realized?signedMoney(pos.realized):"—")+'</td>'+
+      '<td class="mono '+(pos.divCash?"up":"flat")+'">'+(pos.divCash?money(pos.divCash):"—")+
+        (pos.divShares?'<br><span class="hint">+'+trimNum(pos.divShares,4)+' 股</span>':'')+'</td>'+
+      '<td><button class="btn sm" data-edit="'+h.id+'">编辑</button> <button class="btn sm danger" data-del="'+h.id+'">删除</button></td>'+
+    '</tr>';
+  });
+  html += '</tbody><tfoot class="tfoot"><tr><td>合计</td><td></td><td></td><td></td><td class="mono">'+money(tv)+
+    '</td><td class="mono '+clsOf(tv-tc)+'">'+signedMoney(tv-tc)+'</td>'+
+    '<td class="mono '+clsOf(realized)+'">'+(realized?signedMoney(realized):"—")+'</td>'+
+    '<td class="mono '+(divTotal?"up":"flat")+'">'+(divTotal?money(divTotal):"—")+'</td><td></td></tr></tfoot></table></div>';
+  body.innerHTML = html;
+
+  $$("#holdings-body [data-edit]").forEach(function(b){
+    b.addEventListener("click", function(){ openModal(this.getAttribute("data-edit")); });
+  });
+  $$("#holdings-body [data-del]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var h = holdingById(this.getAttribute("data-del"));
+      if(!h) return;
+      if(!confirm("删除持仓「"+h.name+"」？\n该持仓的价格与买卖记录也会一并移除。")) return;
+      takeSnapshot("删除持仓 " + h.name);
+      state.holdings = state.holdings.filter(function(x){ return x.id !== h.id; });
+      Object.keys(state.days).forEach(function(d){
+        var day = state.days[d];
+        if(day.prices) delete day.prices[h.id];
+        if(day.trades) day.trades = day.trades.filter(function(tr){ return tr.holdingId !== h.id; });
+        if(day.divs) day.divs = day.divs.filter(function(dv){ return dv.holdingId !== h.id; });
+      });
+      recalcAllDays();
+      Object.keys(ui.draft).forEach(function(d){ delete ui.draft[d]; });
+      logAdd("holding", "删除持仓 " + h.name,
+        ((h.market||"") + (h.code||"") || "未关联代码") + " · " + trimNum(baseOf(h).shares,4) + " 股 · 成本 " + trimNum(baseOf(h).cost,4));
+      save(); toast("已删除"); renderAll();
+    });
+  });
+  if(!QUOTE.ts && !QUOTE.pending && state.holdings.some(hasSec)){
+    ensureQuotes().then(function(){ if(ui.tab === "holdings") renderHoldings(); })
+      .catch(function(){ if(ui.tab === "holdings") renderHoldings(); });
+  }
+}
+function recalcAllDays(){
+  Object.keys(state.days).forEach(function(d){
+    var day = state.days[d];
+    if(!day) return;
+    var t = computeTotals(day.prices || {}, d);
+    day.totals = { value:t.value, cost:t.cost, profit:t.profit, profitPct:t.profitPct };
+  });
+}
+
+/* ==================== 持仓弹窗 ==================== */
+function openModal(id){
+  editingId = id || null;
+  var h = id ? holdingById(id) : null;
+  pickedSec = h && h.code ? { secid:secidOf(h), market:h.market||"", code:h.code, name:h.name, raw:"" } : null;
+  $("#modal-title").textContent = h ? "编辑持仓" : "新增持仓";
+  $("#f-search").value = h ? h.name : "";
+  $("#f-code").value = h ? (h.code||"") : "";
+  $("#f-type").value = h ? (h.type||"stock") : "stock";
+  var b = h ? baseOf(h) : { shares:"", cost:"" };
+  $("#f-shares").value = h ? b.shares : "";
+  $("#f-cost").value = h ? b.cost : "";
+  hideAc(); renderPicked(); updateCostPreview();
+  $("#modal").hidden = false; snapModal("modal");
+  setTimeout(function(){ $("#f-search").focus(); }, 30);
+}
+function closeModal(){ $("#modal").hidden = true; editingId = null; pickedSec = null; hideAc(); }
+function renderPicked(){
+  var el = $("#f-picked");
+  if(pickedSec && pickedSec.code){
+    el.innerHTML = '<span class="pick">🔗 '+esc(pickedSec.name)+' · '+esc(pickedSec.secid)+' · '+esc(marketLabel(pickedSec.market))+'</span>';
+  }else if($("#f-search").value.trim()){
+    el.innerHTML = '<span class="hint">保存时自动匹配代码</span>';
+  }else{
+    el.innerHTML = '<span class="hint">输入后从下拉列表中选择，或直接保存由系统自动匹配</span>';
+  }
+}
+function updateCostPreview(){
+  var shares = toNum($("#f-shares").value), cost = toNum($("#f-cost").value);
+  var el = $("#f-preview"); if(!el) return;
+  el.textContent = (isFinite(shares) && isFinite(cost)) ? ("初始投入成本：" + money(shares*cost)) : "初始投入成本：—";
+}
+function saveHolding(){
+  var text = $("#f-search").value.trim();
+  var codeInput = $("#f-code").value.trim();
+  var type = $("#f-type").value;
+  var shares = toNum($("#f-shares").value);
+  var cost = toNum($("#f-cost").value);
+  if(!text && !codeInput){ toast("请填写名称"); return; }
+  if(!isFinite(shares) || shares < 0){ toast("请填写正确的初始份额"); return; }
+  if(!isFinite(cost) || cost < 0){ toast("请填写正确的初始成本价"); return; }
+
+  var ready;
+  if(pickedSec && pickedSec.name === text && (!codeInput || codeInput === pickedSec.code)) ready = Promise.resolve(pickedSec);
+  else if(codeInput && codeInput !== (pickedSec ? pickedSec.code : "")) ready = Promise.resolve({ name:text||codeInput, code:codeInput, market:inferMarket(codeInput, type), raw:"" });
+  else ready = resolveSecurity(text || codeInput, type);
+
+  takeSnapshot(editingId ? "编辑持仓" : "新增持仓");
+  var btn = $("#btn-save-holding"); btn.disabled = true; btn.textContent = "匹配中…";
+  ready.then(function(sec){
+    btn.disabled = false; btn.textContent = "保存";
+    var name = text || (sec ? sec.name : codeInput), code = "", market = "";
+    if(sec){ code = sec.code; market = sec.market || inferMarket(sec.code, type); if(sec.name) name = sec.name; }
+    if(!code && codeInput){ code = codeInput; market = inferMarket(codeInput, type); }
+    if(editingId){
+      var h = holdingById(editingId);
+      if(h){ h.name=name; h.code=code; h.market=market; h.type=type; h.baseShares=shares; h.baseCost=cost; }
+    }else{
+      state.holdings.push({ id:uid(), name:name, code:code, market:market, type:type,
+        baseShares:shares, baseCost:cost, createdAt:Date.now() });
+    }
+    recalcAllDays();
+    Object.keys(ui.draft).forEach(function(d){ delete ui.draft[d]; });
+    logAdd("holding", (editingId ? "修改持仓 " : "新增持仓 ") + name,
+      (code ? ((market||"") + code) : "未关联代码") + " · " + trimNum(shares,4) + " 股 · 成本 " + trimNum(cost,4));
+    save(); closeModal();
+    toast(code ? ("已保存并关联 " + market + code) : "已保存（未关联代码）");
+    renderAll();
+  }).catch(function(){
+    btn.disabled = false; btn.textContent = "保存";
+    toast("匹配代码失败，请检查网络或手动填写代码");
+  });
+}
+
+/* ==================== 收益分析 ==================== */
+var cfView = null;
+function renderPerf(){
+  var body = $("#perf-body"), note = $("#perf-note");
+  if(!body) return;
+  var s = cashflowSeries();
+  var r = s.ok ? xirr(s.flows) : null;
+  var invested = netInvested();
+  var total = s.total || 0;
+  var gain = total - invested;
+  var simple = invested > 0 ? gain/invested*100 : null;
+
+  if(note){
+    note.textContent = s.mode === "transfer" ? "按出入金 + 期末资产（标准口径）"
+      : (s.mode === "trade" ? "未记录出入金，按买卖流水估算"
+      : (s.mode === "initial" ? "按初始建仓成本 + 期末资产" : ""));
+  }
+  var html = '<div class="summary" style="padding:0">';
+  html += sumCard("年化收益 XIRR", r === null ? "—" : pctStr(r*100),
+    r === null ? "数据不足" : "资金加权年化", r === null ? "flat" : clsOf(r), true);
+  html += sumCard("累计净投入", money(invested), "转出/取回已扣除", "");
+  html += sumCard("当前总资产", money(total), s.lastDate || "—", "");
+  html += sumCard("累计收益", signedMoney(gain), simple === null ? "—" : pctStr(simple), clsOf(gain));
+  html += '</div>';
+
+  if(!s.ok){
+    html += '<div class="hint" style="margin-top:12px">' + esc(s.reason || "数据不足") +
+      '。XIRR 需要至少一笔投入和一笔收回（期末总资产会自动作为最后一笔）。</div>';
+  }else if(s.mode === "trade"){
+    html += '<div class="hint" style="margin-top:12px">⚠️ 还没有记录过出入金，当前用<b>买卖流水</b>近似计算。' +
+      '如果你有从银行卡转入/转出的资金，去「每日记录 → 出入金」补记后，这里会切换成更准确的<b>标准口径</b>。</div>';
+  }else if(initialCost() > 0 && !flowEntries().some(function(e){ return e.fl.side !== "out"; })){
+    html += '<div class="hint" style="margin-top:12px">已把「初始建仓成本 ' + money(initialCost()) +
+      '」按最早日期计为一笔投入。</div>';
+  }
+  body.innerHTML = html;
+
+  var cf = $("#cf-detail");
+  if(cf){
+    if(cfView === "cf") cf.innerHTML = cashflowTable(s);
+    else if(cfView === "inv") cf.innerHTML = investTable();
+    else cf.innerHTML = "";
+    var b1 = $("#btn-show-cf"), b2 = $("#btn-show-inv");
+    if(b1) b1.textContent = cfView === "cf" ? "收起现金流明细" : "查看现金流明细";
+    if(b2) b2.textContent = cfView === "inv" ? "收起净投入构成" : "查看净投入构成";
+  }
+}
+function cashflowTable(s){
+  if(!s.flows.length) return '<div class="hint">暂无现金流</div>';
+  var html = '<div class="tblwrap"><table><thead><tr><th>日期</th><th>项目</th><th>现金流</th></tr></thead><tbody>';
+  s.flows.forEach(function(f){
+    html += '<tr><td>'+f.date+'</td><td style="text-align:left">'+esc(f.label||"")+'</td>'+
+      '<td class="mono '+clsOf(f.amount)+'">'+signedMoney(f.amount)+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<div class="hint" style="margin-top:8px">负数=投入（放进去的钱），正数=收回（拿回来 + 期末资产）。XIRR 就是让这些现金流按时间折现后总和为零的年化利率。</div>';
+  return html;
+}
+function investTable(){
+  var rows = [];
+  var ic = initialCost();
+  if(ic > 0) rows.push(["初始建仓成本", -ic]);
+  flowEntries().forEach(function(e){
+    var a = toNum(e.fl.amount) || 0;
+    rows.push([(e.date + " " + (e.fl.side === "out" ? "转出" : "转入")) + (e.fl.note ? (" · " + e.fl.note) : ""),
+               e.fl.side === "out" ? -a : a]);
+  });
+  if(!rows.length) return '<div class="hint">还没有任何投入记录。</div>';
+  var html = '<div class="tblwrap"><table><thead><tr><th>项目</th><th>金额</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    html += '<tr><td style="text-align:left">'+esc(r[0])+'</td><td class="mono '+clsOf(r[1])+'">'+signedMoney(r[1])+'</td></tr>';
+  });
+  html += '</tbody><tfoot class="tfoot"><tr><td>合计净投入</td><td class="mono">'+money(netInvested())+'</td></tr></tfoot></table></div>';
+  return html;
+}
+
+/* ==================== 基准：指数历史行情 ==================== */
+function benchName(secid){
+  for(var i=0;i<BENCH_LIST.length;i++) if(BENCH_LIST[i].secid === secid) return BENCH_LIST[i].label;
+  return secid;
+}
+function benchLoad(){
+  try{
+    var raw = localStorage.getItem(BENCH_KEY); if(!raw) return;
+    var o = JSON.parse(raw);
+    if(o && o.secid && Array.isArray(o.list) && o.list.length){
+      BENCH.secid = o.secid; BENCH.list = o.list; BENCH.ts = o.ts || 0;
+    }
+  }catch(e){}
+}
+function benchSave(){
+  try{ localStorage.setItem(BENCH_KEY, JSON.stringify({ secid:BENCH.secid, list:BENCH.list, ts:BENCH.ts })); }catch(e){}
+}
+function parseKline(json, secid){
+  var d = json && json.data && json.data[secid];
+  if(!d) return null;
+  var arr = d.day || d.qfqday || d.hfqday || null;
+  if(!arr || !arr.length) return null;
+  var out = [];
+  arr.forEach(function(row){
+    var dt = row && row[0], close = parseFloat(row && row[2]);
+    if(dt && isFinite(close) && close > 0) out.push([String(dt).slice(0,10), close]);
+  });
+  out.sort(function(a,b){ return a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0); });
+  return out.length ? out : null;
+}
+function fetchKline(secid, count){
+  var url = KLINE_API + secid + ",day,,," + (count || 500) + ",qfq";
+  return fetch(url, { cache:"no-store" }).then(function(r){
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }).then(function(json){
+    var list = parseKline(json, secid);
+    if(!list) throw new Error("未返回指数数据");
+    return list;
+  });
+}
+function ensureBench(force){
+  if(BENCH.fetching) return BENCH.pending || Promise.resolve(BENCH.list);
+  if(!force && BENCH.list.length && (Date.now() - BENCH.ts) < 43200000) return Promise.resolve(BENCH.list);
+  BENCH.fetching = true; BENCH.err = "";
+  BENCH.pending = fetchKline(BENCH.secid, 500).then(function(list){
+    BENCH.list = list; BENCH.ts = Date.now(); BENCH.fetching = false; BENCH.pending = null;
+    BENCH.err = ""; benchSave();
+    if(ui.tab === "trend") renderBench();
+    return list;
+  }).catch(function(err){
+    BENCH.fetching = false; BENCH.pending = null; BENCH.err = err.message || "获取失败";
+    if(ui.tab === "trend") renderBench();
+    throw err;
+  });
+  return BENCH.pending;
+}
+// 取 <= date 的最近一个收盘价
+function benchCloseOnOrBefore(date){
+  var a = BENCH.list, lo = 0, hi = a.length - 1, best = null;
+  while(lo <= hi){
+    var mid = (lo + hi) >> 1;
+    if(a[mid][0] <= date){ best = a[mid][1]; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  return best;
+}
+function benchCloseOnOrAfter(date){
+  var a = BENCH.list, lo = 0, hi = a.length - 1, best = null;
+  while(lo <= hi){
+    var mid = (lo + hi) >> 1;
+    if(a[mid][0] >= date){ best = a[mid][1]; hi = mid - 1; } else { lo = mid + 1; }
+  }
+  return best;
+}
+function totalAssets(date){
+  var d = state.days[date];
+  if(!d || !d.totals) return 0;
+  return d.totals.value + cashOf(date);
+}
+// 时间加权收益率：把出入金从涨跌中剔除，纯看“选股/择时”的表现
+function twrSeries(){
+  var dates = sortedDates();
+  if(dates.length < 2) return null;
+  var pts = [{ date:dates[0], cum:1 }], cum = 1;
+  for(var i=1;i<dates.length;i++){
+    var pv = totalAssets(dates[i-1]);
+    if(pv <= 0){ pts.push({ date:dates[i], cum:cum }); continue; }
+    var cf = flowNet(state.days[dates[i]].flows || []);
+    var r = (totalAssets(dates[i]) - cf) / pv - 1;
+    if(isFinite(r) && r > -0.9999 && r < 100) cum *= (1 + r);
+    pts.push({ date:dates[i], cum:cum });
+  }
+  return pts;
+}
+function benchCompare(){
+  var tw = twrSeries();
+  if(!tw) return null;
+  if(!BENCH.list.length) return { pts:null, tw:tw };
+  var d0 = tw[0].date;
+  var b0 = benchCloseOnOrAfter(d0) || benchCloseOnOrBefore(d0);
+  if(!b0) return { pts:null, tw:tw };
+  var pts = tw.map(function(p){
+    var bc = benchCloseOnOrBefore(p.date);
+    if(bc === null) bc = benchCloseOnOrAfter(p.date);
+    return { date:p.date, acct:(p.cum-1)*100, bench: bc === null ? 0 : (bc/b0-1)*100 };
+  });
+  return { pts:pts, tw:tw, base:b0, baseDate:d0,
+           benchName:benchName(BENCH.secid), benchSecid:BENCH.secid };
+}
+
+/* ==================== 月度盈亏 / 日历 ==================== */
+function dailyPnl(){
+  var dates = sortedDates(), out = {};
+  for(var i=0;i<dates.length;i++){
+    var d = dates[i], v = totalAssets(d), flow = flowNet(state.days[d].flows || []);
+    if(i === 0){ out[d] = { v:v, flow:flow, pnl:0, ret:null, prevV:null }; continue; }
+    var pv = totalAssets(dates[i-1]);
+    out[d] = { v:v, flow:flow, pnl:v - pv - flow, ret: pv > 0 ? (v-pv-flow)/pv*100 : null, prevV:pv };
+  }
+  return out;
+}
+function monthStats(pnl){
+  var dates = sortedDates();
+  if(!dates.length) return [];
+  var order = [], byKey = {};
+  dates.forEach(function(d, i){
+    var m = d.slice(0,7), g = byKey[m], row = pnl[d];
+    if(!g){
+      g = byKey[m] = { month:m, openV:(row.prevV === null || row.prevV === undefined ? (row.v - row.flow) : row.prevV),
+                       endV:row.v, pnl:0, flow:0, div:0, trades:0, days:0, first:d, last:d };
+      order.push(g);
+    }
+    g.endV = row.v; g.last = d; g.days++;
+    g.pnl += row.pnl; g.flow += row.flow;
+    g.trades += (state.days[d].trades || []).length;
+  });
+  var r = replay(null);
+  Object.keys(r.divCash).forEach(function(d){
+    var m = d.slice(0,7);
+    if(byKey[m]) byKey[m].div += r.divCash[d];
+  });
+  order.forEach(function(g){ g.ret = g.openV > 0 ? g.pnl / g.openV * 100 : null; });
+  return order;
+}
+function monthCellColor(pnl, maxAbs){
+  if(!isFinite(pnl) || pnl === 0 || !maxAbs) return "";
+  var a = 0.14 + 0.46 * Math.min(1, Math.abs(pnl)/maxAbs);
+  return hexA(pnl > 0 ? cssVar("--up") : cssVar("--down"), a);
+}
+function renderCalendar(month, pnl){
+  var ym = month.split("-"), y = parseInt(ym[0],10), mo = parseInt(ym[1],10);
+  var first = new Date(y, mo-1, 1);
+  var days = new Date(y, mo, 0).getDate();
+  var lead = (first.getDay() + 6) % 7;   // 周一为第一列
+  var cells = [], maxAbs = 0, daysIn = [];
+  for(var d=1; d<=days; d++){
+    var key = month + "-" + pad2(d);
+    if(pnl[key]){ daysIn.push(key); maxAbs = Math.max(maxAbs, Math.abs(pnl[key].pnl)); }
+  }
+  var html = '<div class="calwrap"><div class="cal">';
+  ["一","二","三","四","五","六","日"].forEach(function(w){ html += '<div class="h">'+w+'</div>'; });
+  for(var i=0;i<lead;i++) html += '<div class="cell void"></div>';
+  for(var dd=1; dd<=days; dd++){
+    var k = month + "-" + pad2(dd), p = pnl[k];
+    if(!p){ html += '<div class="cell void"><div class="d">'+dd+'</div></div>'; continue; }
+    var bg = monthCellColor(p.pnl, maxAbs);
+    var money2 = (p.pnl > 0 ? "+" : (p.pnl < 0 ? "-" : "")) + shortNum(Math.abs(p.pnl));
+    html += '<div class="cell" style="'+(bg?("background:"+bg+";border-color:transparent;"):"")+'">'+
+      '<div class="d">'+dd+'</div>'+
+      '<div class="p '+(p.pnl>0?"up":(p.pnl<0?"down":"flat"))+'">'+(p.pnl===0?"0":money2)+'</div>'+
+      (p.flow ? '<div class="f">'+(p.flow>0?"转入 ":"转出 ")+shortNum(Math.abs(p.flow))+'</div>' : '')+
+      '</div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
+/* ==================== 多设备同步（GitHub Gist） ==================== */
+function syncLoad(){
+  try{
+    var raw = localStorage.getItem(SYNC_KEY);
+    if(raw){
+      var o = JSON.parse(raw);
+      if(o){
+        SYNC.gistId = o.gistId || ""; SYNC.auto = !!o.auto;
+        SYNC.lastPushAt = o.lastPushAt || 0; SYNC.lastPullAt = o.lastPullAt || 0;
+        SYNC.login = o.login || "";
+      }
+    }
+  }catch(e){}
+}
+function syncSave(){
+  try{
+    localStorage.setItem(SYNC_KEY, JSON.stringify({ gistId:SYNC.gistId, auto:SYNC.auto,
+      lastPushAt:SYNC.lastPushAt, lastPullAt:SYNC.lastPullAt, login:SYNC.login }));
+  }catch(e){}
+}
+// 每次动作前先把界面上填的值读回来。
+// 否则会出现「输入框看着是空的、内存里还留着上一次的 Gist ID」→ 上传时误以为要更新一个不存在的 Gist → 404
+function syncReadForm(){
+  var g = $("#sync-gistid");
+  if(g) SYNC.gistId = g.value.trim();
+  var a = $("#sync-auto");
+  if(a) SYNC.auto = a.checked;
+  var t = $("#sync-token");
+  if(t && t.value.trim()) syncSetToken(t.value.trim());
+  syncSave();
+}
+// 本机是不是空数据（没有持仓，也没有任何一天记录）
+function syncLocalEmpty(){
+  return !state.holdings.length && !sortedDates().length;
+}
+function syncToken(){ try{ return localStorage.getItem(SYNC_TOKEN_KEY) || ""; }catch(e){ return ""; } }
+function syncSetToken(t){ try{ if(t) localStorage.setItem(SYNC_TOKEN_KEY, t); else localStorage.removeItem(SYNC_TOKEN_KEY); }catch(e){} }
+function ghFetch(path, opts){
+  var token = syncToken();
+  if(!token) return Promise.reject(new Error("还没有填写 GitHub 访问令牌"));
+  opts = opts || {};
+  var headers = Object.assign({
+    "Authorization": "Bearer " + token,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  }, opts.headers || {});
+  return fetch(SYNC_API + path, Object.assign({}, opts, { headers:headers })).then(function(r){
+    return r.text().then(function(txt){
+      var body = null;
+      try{ body = txt ? JSON.parse(txt) : null; }catch(e){}
+      if(!r.ok){
+        var msg = (body && (body.message ||
+          (body.errors && body.errors[0] && body.errors[0].message))) || ("HTTP " + r.status);
+        if(r.status === 401) msg = "令牌无效或已过期（401）";
+        else if(r.status === 403) msg = "权限不足或被限流（403）：令牌需要勾选 gist 权限";
+        else if(r.status === 404) msg = "找不到该 Gist（404）：Gist ID 填错了，或者这个 Gist 已被删除。首次上传请把「Gist ID」留空；也可以点「重置同步设置」清空后重新上传。";
+        var err = new Error(msg); err.status = r.status;
+        err.rateLimit = r.headers && r.headers.get ? r.headers.get("x-ratelimit-remaining") : null;
+        throw err;
+      }
+      return body;
+    });
+  });
+}
+function syncPayload(){
+  return JSON.stringify(Object.assign({}, state, {
+    __app:"每日持仓记录", __syncAt:new Date().toISOString(), __version:2
+  }), null, 1);
+}
+function syncPush(){
+  if(SYNC.busy) return Promise.reject(new Error("正在同步中，请稍候"));
+  if(!syncToken()) return Promise.reject(new Error("还没有填写 GitHub 访问令牌"));
+  // 本机空空如也、但云端有备份时，绝不默认把云端覆盖成空数据
+  if(syncLocalEmpty() && SYNC.gistId){
+    var goEmpty = false;
+    try{
+      goEmpty = confirm("本机现在没有任何持仓和记录。\n\n如果继续上传，云端那份备份会被覆盖成空数据。\n\n【取消】停止上传（推荐，先去「从云端恢复」把数据拉回来）\n【确定】确实要清空云端，照传");
+    }catch(e){}
+    if(!goEmpty){
+      SYNC.busy = false; SYNC.err = "已拦下：本机是空数据，没有覆盖云端备份";
+      renderSync(); renderData();
+      return Promise.reject(new Error("已拦下：本机是空数据，没有覆盖云端备份"));
+    }
+  }
+  SYNC.busy = true; SYNC.err = ""; renderSync();
+  function pushTo(id){
+    var files = {}; files[SYNC_FILE] = { content: syncPayload() };
+    if(id) return ghFetch("/gists/" + id, { method:"PATCH", body: JSON.stringify({ files:files }) });
+    return ghFetch("/gists", { method:"POST", body: JSON.stringify({
+      description:"每日持仓记录 · 多设备同步", public:false, files:files }) });
+  }
+  return pushTo(SYNC.gistId).catch(function(err){
+    // Gist 被删了 / ID 抄错了 → 问一句就改成新建，别让人卡在一个看不懂的 404 上
+    if(!(err && err.status === 404 && SYNC.gistId && state.holdings.length)) throw err;
+    var ok = false;
+    try{ ok = confirm("找不到 ID 为「" + SYNC.gistId + "」的 Gist。\n\n可能是已经被删了，或者 ID 填错了。\n\n【确定】不管它，新建一个 Gist 存放\n【取消】先不动，我自己去检查"); }catch(e){}
+    if(!ok) throw err;
+    var old = SYNC.gistId;
+    SYNC.gistId = ""; syncSave();
+    logCommit("sync", "原 Gist 找不到，改为新建", "废弃的 ID：" + old);
+    return pushTo("");
+  }).then(function(g){
+    if(g && g.id) SYNC.gistId = g.id;
+    SYNC.lastPushAt = Date.now(); SYNC.lastPullAt = SYNC.lastPushAt; SYNC.err = "";
+    syncSave(); SYNC.busy = false; renderSync();
+    if(ui.tab === "data") renderData();
+    logCommit("sync", "上传到云端", "Gist " + SYNC.gistId + " · 持仓 " + state.holdings.length + " 个 · " + sortedDates().length + " 天记录");
+    toast("已上传到云端");
+    return g;
+  }).catch(function(err){
+    SYNC.busy = false; SYNC.err = err.message || "上传失败"; renderSync();
+    throw err;
+  });
+}
+function syncFetchRemote(){
+  if(!SYNC.gistId) return Promise.reject(new Error("还没有 Gist ID，请先「上传到云端」创建，或从列表中选择"));
+  return ghFetch("/gists/" + SYNC.gistId, { method:"GET" }).then(function(g){
+    var f = g && g.files && g.files[SYNC_FILE];
+    if(!f) throw new Error("云端 Gist 里没有 " + SYNC_FILE);
+    if(f.content) return f.content;
+    if(f.truncated && f.raw_url) return fetch(f.raw_url).then(function(r){ return r.text(); });
+    throw new Error("无法读取云端内容");
+  });
+}
+function syncApply(text){
+  var obj = JSON.parse(text);
+  if(!obj || !Array.isArray(obj.holdings)) throw new Error("云端数据格式不正确");
+  state.holdings = obj.holdings;
+  state.days = (obj.days && typeof obj.days === "object") ? obj.days : {};
+  state.settings = Object.assign({}, state.settings, obj.settings || {});
+  state.log = logMerge(state.log, obj.log);
+  logAdd("sync", "用云端数据覆盖本地",
+    "持仓 " + state.holdings.length + " 个 · " + Object.keys(state.days).length + " 天记录 · 日志合并后 " + logCount() + " 条");
+  migrate(); ui.draft = {}; ui.dirty = false; QUOTE.map = {}; QUOTE.ts = 0;
+  SYNC.lastPullAt = Date.now(); syncSave();
+  save(); renderAll();
+  return obj;
+}
+function syncPullApply(){
+  takeSnapshot("从云端恢复前");
+  return syncFetchRemote().then(function(text){
+    var obj = syncApply(text);
+    toast("已从云端恢复（" + Object.keys(state.days).length + " 天记录）");
+    return obj;
+  }).catch(function(err){
+    SYNC.err = err.message || "恢复失败"; renderSync();
+    toast("恢复失败：" + (err.message || "网络异常"));
+    throw err;
+  });
+}
+function syncTest(){
+  // /user 只要有张有效令牌就能过，不检验权限范围；
+  // 所以这里再打一次 /gists，确认令牌真的带 gist 权限，避免「测试成功但上传失败」
+  return ghFetch("/user", { method:"GET" }).then(function(u){
+    SYNC.login = (u && u.login) || "";
+    return ghFetch("/gists?per_page=1", { method:"GET" }).then(function(){
+      return u;
+    }, function(err){
+      if(err && err.status === 403) throw new Error("令牌有效，但没有 gist 权限 —— 请重新生成令牌并勾选 gist");
+      throw err;
+    });
+  }).then(function(u){
+    SYNC.err = ""; syncSave(); renderSync();
+    return u;
+  }).catch(function(err){
+    SYNC.err = err.message || "连接失败"; renderSync(); throw err;
+  });
+}
+function syncSmart(){
+  if(!syncToken()) return Promise.reject(new Error("还没有填写 GitHub 访问令牌"));
+  if(!SYNC.gistId) return syncPush();
+  return syncFetchRemote().then(function(text){
+    var remote = null;
+    try{ remote = JSON.parse(text); }catch(e){}
+    var remoteAt = (remote && remote.__syncAt) ? Date.parse(remote.__syncAt) : 0;
+    var localDays = sortedDates().length;
+    var remoteDays = (remote && remote.days)
+      ? Object.keys(remote.days).filter(function(d){ return remote.days[d] && remote.days[d].totals; }).length : 0;
+    var remoteNewer = remoteAt > SYNC.lastPushAt + 2000;
+    if(remoteNewer && remoteDays >= localDays && localDays > 0){
+      var useRemote = confirm(
+        "检测到云端更新。\n\n云端：" + remoteDays + " 天记录 · " + (remoteAt ? new Date(remoteAt).toLocaleString("zh-CN",{hour12:false}) : "未知时间") +
+        "\n本地：" + localDays + " 天记录 · 上次上传 " + (SYNC.lastPushAt ? new Date(SYNC.lastPushAt).toLocaleString("zh-CN",{hour12:false}) : "从未") +
+        "\n\n【确定】用云端覆盖本地\n【取消】用本地覆盖云端");
+      if(useRemote){ syncApply(text); toast("已用云端数据覆盖本地"); return null; }
+    }
+    return syncPush();
+  });
+}
+function syncSchedule(){
+  if(!SYNC.auto || !syncToken() || !SYNC.gistId) return;
+  if(syncLocalEmpty()) return;   // 自动上传永远不推空数据
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(function(){ syncPush().catch(function(){}); }, 4000);
+}
+function syncListGists(){
+  return ghFetch("/gists?per_page=100", { method:"GET" }).then(function(list){
+    if(!Array.isArray(list)) return [];
+    return list.filter(function(g){ return g && g.files && g.files[SYNC_FILE]; });
+  });
+}
+function syncTime(ts){ return ts ? new Date(ts).toLocaleString("zh-CN",{hour12:false}) : "—"; }
+
+/* ==================== 趋势 ==================== */
+var SERIES = [
+  { key:"total", label:"总资产", color:"--c1", width:2.2, dash:null },
+  { key:"value", label:"持仓市值", color:"--c2", width:1.8, dash:null },
+  { key:"cost",  label:"持仓成本", color:"--c3", width:1.4, dash:[5,4] },
+  { key:"cash",  label:"可用现金", color:"--c4", width:1.6, dash:[2,3] }
+];
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function renderTrend(){
+  renderPerf();
+  renderBench();
+  renderMonthly();
+  var dates = sortedDates();
+  $("#trend-range").textContent = dates.length
+    ? (dates.length>1 ? (dates[0]+" ~ "+dates[dates.length-1]+" · 共 "+dates.length+" 天") : (dates[0]+" · 共 1 天")) : "";
+  var series = dates.map(function(d){
+    var t = state.days[d].totals, c = cashOf(d);
+    return { date:d, value:t.value, cost:t.cost, cash:c, total:t.value + c };
+  });
+  drawChart(series);
+
+  $("#chart-legend").innerHTML = SERIES.map(function(s){
+    return '<span class="lg'+(chartOn[s.key]?"":" off")+'" data-key="'+s.key+'"><i style="background:var('+s.color+')"></i>'+s.label+'</span>';
+  }).join("");
+  $$("#chart-legend .lg").forEach(function(el){
+    el.addEventListener("click", function(){
+      chartOn[this.getAttribute("data-key")] = !chartOn[this.getAttribute("data-key")];
+      renderTrend();
+    });
+  });
+
+  var body = $("#history-body");
+  if(!dates.length){
+    body.innerHTML = '<div class="empty">还没有历史记录<p>在「每日记录」中保存一次，就会出现这里</p></div>';
+    $("#hist-sum").textContent = ""; return;
+  }
+  var first = series[0], last = series[series.length-1];
+  $("#hist-sum").textContent = "共 " + series.length + " 条记录";
+
+  var html = '<div class="tblwrap"><table><thead><tr>'+
+    '<th>日期</th><th>总资产</th><th>持仓市值</th><th>可用现金</th><th>出入金</th><th>浮动盈亏</th><th>操作</th><th>较上次</th><th>明细</th></tr></thead><tbody>';
+  for(var i=series.length-1;i>=0;i--){
+    var s = series[i], d = s.date;
+    var day = state.days[d];
+    var diff = i>0 ? s.total - series[i-1].total : null;
+    var nTr = (day.trades||[]).length;
+    var fn = flowNet(day.flows);
+    html += '<tr><td>'+d+'</td>'+
+      '<td class="mono"><b>'+money(s.total)+'</b></td>'+
+      '<td class="mono">'+money(s.value)+'</td>'+
+      '<td class="mono">'+money(s.cash)+'</td>'+
+      '<td class="mono '+(fn?clsOf(fn):"flat")+'">'+(fn?signedMoney(fn):"—")+'</td>'+
+      '<td class="mono '+clsOf(day.totals.profit)+'">'+signedMoney(day.totals.profit)+'</td>'+
+      '<td class="mono">'+(nTr?('<span class="tag">'+nTr+' 笔</span>'):"—")+'</td>'+
+      '<td class="mono '+(diff===null?"flat":clsOf(diff))+'">'+(diff===null?"—":signedMoney(diff))+'</td>'+
+      '<td><button class="btn sm" data-goto="'+d+'">查看</button> <button class="btn sm danger" data-rm="'+d+'">删除</button></td></tr>';
+  }
+  html += '</tbody></table></div>';
+  body.innerHTML = html;
+  $$("#history-body [data-goto]").forEach(function(b){
+    b.addEventListener("click", function(){ ui.date = this.getAttribute("data-goto"); ui.dirty = false; switchTab("daily"); });
+  });
+  $$("#history-body [data-rm]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var d = this.getAttribute("data-rm");
+      if(!confirm("删除 "+d+" 的记录？当天的买卖操作也会一并删除。")) return;
+      takeSnapshot("删除 " + d + " 记录");
+      delete state.days[d]; delete ui.draft[d]; ui.dirty = false;
+      recalcAllDays(); save(); toast("已删除"); renderAll();
+    });
+  });
+}
+/* ==================== 基准对比：渲染 ==================== */
+function renderBench(){
+  var body = $("#bench-body"), note = $("#bench-note"), legend = $("#bench-legend");
+  if(!body) return;
+  var pick = $("#bench-pick");
+  if(pick && pick.value !== BENCH.secid) pick.value = BENCH.secid;
+  if(note){
+    if(BENCH.fetching) note.innerHTML = '<span class="spin"></span>抓取中…';
+    else if(BENCH.err) note.innerHTML = '<span class="warnc">'+esc(BENCH.err)+'</span>';
+    else if(BENCH.ts) note.textContent = benchName(BENCH.secid)+" 行情 "+
+      new Date(BENCH.ts).toLocaleString("zh-CN",{hour12:false}).slice(5,16);
+    else note.textContent = "尚未抓取指数行情";
+  }
+  var cmp = benchCompare();
+  if(!cmp || !cmp.tw){
+    if(body) body.innerHTML = '<div class="empty">历史记录还不够<p>至少保存 2 天记录后，才能和指数做对比</p></div>';
+    if(legend) legend.innerHTML = "";
+    drawBenchChart([]); return;
+  }
+  if(!cmp.pts){
+    body.innerHTML = '<div class="hint">还没有 ' + esc(benchName(BENCH.secid)) +
+      ' 的历史行情。点右上角「⟳ 抓取指数行情」后即可对比（数据来自腾讯财经，只缓存在本机）。</div>';
+    if(legend) legend.innerHTML = "";
+    drawBenchChart([]);
+    if(state.settings.autoFetch && !BENCH.fetching && !BENCH.err) ensureBench(false).catch(function(){});
+    return;
+  }
+  var pts = cmp.pts, last = pts[pts.length-1], first = pts[0];
+  var days = Math.max(1, daysBetween(first.date, last.date));
+  var acctAnn = null, benchAnn = null;
+  if(1 + last.acct/100 > 0) acctAnn = (Math.pow(1 + last.acct/100, 365/days) - 1) * 100;
+  if(1 + last.bench/100 > 0) benchAnn = (Math.pow(1 + last.bench/100, 365/days) - 1) * 100;
+  var excess = last.acct - last.bench;
+
+  var html = '<div class="summary" style="padding:0">';
+  html += sumCard("我的账户（时间加权）", pctStr(last.acct), "剔除出入金后的真实涨跌", clsOf(last.acct), true);
+  html += sumCard(cmp.benchName + " 同期", pctStr(last.bench), cmp.benchSecid, clsOf(last.bench));
+  html += sumCard("超额收益", pctStr(excess), excess > 0 ? "跑赢指数" : (excess < 0 ? "跑输指数" : "持平"), clsOf(excess));
+  html += sumCard("年化对比", (acctAnn===null?"—":pctStr(acctAnn)) + " / " + (benchAnn===null?"—":pctStr(benchAnn)),
+    "账户 / 指数", clsOf(acctAnn===null?0:(acctAnn-benchAnn)));
+  html += sumCard("对比区间", days + " 天", first.date + " ~ " + last.date, "");
+  html += '</div>';
+  html += '<div class="hint" style="margin-top:12px">账户曲线用的是<b>时间加权收益率</b>：把每天的出入金从涨跌里剔除，' +
+    '再逐日连乘。这样「中途加钱」不会虚增收益，和指数才是同一把尺子。<br>' +
+    '口径差异：指数用的是点位（<b>不含成份股分红</b>），而账户收益<b>包含现金分红</b>，所以账户会略微占优势，别把这点差额当成超额能力。</div>';
+  body.innerHTML = html;
+  if(legend){
+    legend.innerHTML =
+      '<span class="lg"><i style="background:var(--c1)"></i>我的账户</span>' +
+      '<span class="lg"><i style="background:var(--c4)"></i>'+esc(cmp.benchName)+'</span>' +
+      '<span class="hint">共 '+pts.length+' 个记录点</span>';
+  }
+  drawBenchChart(pts);
+}
+function drawBenchChart(pts){
+  var cv = $("#bench-chart"), tip = $("#bench-tip");
+  if(!cv) return;
+  var H = 220, W = (cv.parentElement && cv.parentElement.clientWidth) || 320;
+  var dpr = window.devicePixelRatio || 1;
+  cv.width = Math.max(1, Math.round(W*dpr)); cv.height = Math.round(H*dpr);
+  cv.style.width = W+"px"; cv.style.height = H+"px";
+  var ctx = cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  var cLine = cssVar("--line") || "#e6e8ec", cMuted = cssVar("--muted") || "#6b7280";
+  if(!pts || !pts.length){
+    ctx.fillStyle = cMuted; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("暂无对比数据", W/2, H/2);
+    window.benchGeo = null; if(tip) tip.style.opacity = 0; return;
+  }
+  var padL=58, padR=16, padT=14, padB=26, W0=W-padL-padR, H0=H-padT-padB;
+  var vals = [0];
+  pts.forEach(function(p){ vals.push(p.acct); vals.push(p.bench); });
+  var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  if(max === min){ max = min + 1; min = min - 1; }
+  var pad = (max-min)*0.1; min -= pad; max += pad;
+  function X(i){ return pts.length === 1 ? padL+W0/2 : padL + W0*i/(pts.length-1); }
+  function Y(v){ return padT + H0*(1-(v-min)/(max-min)); }
+  ctx.font = "11px sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for(var g=0; g<=4; g++){
+    var v = min + (max-min)*g/4, y = Y(v);
+    ctx.strokeStyle = cLine; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, Math.round(y)+.5); ctx.lineTo(W-padR, Math.round(y)+.5); ctx.stroke();
+    ctx.fillStyle = cMuted; ctx.fillText(fmt(v,1)+"%", padL-8, y);
+  }
+  if(min < 0 && max > 0){
+    ctx.setLineDash([4,3]); ctx.strokeStyle = cMuted; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, Math.round(Y(0))+.5); ctx.lineTo(W-padR, Math.round(Y(0))+.5); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = cMuted;
+  var step = Math.max(1, Math.ceil(pts.length/5));
+  for(var i=0;i<pts.length;i+=step) ctx.fillText(pts[i].date.slice(5), X(i), H-padB+7);
+  if((pts.length-1)%step !== 0 && pts.length>1) ctx.fillText(pts[pts.length-1].date.slice(5), X(pts.length-1), H-padB+7);
+  [["bench","--c4",1.7,[5,4]],["acct","--c1",2.2,null]].forEach(function(cfg){
+    ctx.beginPath();
+    pts.forEach(function(p,i){ i ? ctx.lineTo(X(i),Y(p[cfg[0]])) : ctx.moveTo(X(i),Y(p[cfg[0]])); });
+    ctx.strokeStyle = cssVar(cfg[1]); ctx.lineWidth = cfg[2];
+    if(cfg[3]) ctx.setLineDash(cfg[3]);
+    ctx.lineJoin = "round"; ctx.stroke(); ctx.setLineDash([]);
+  });
+  window.benchGeo = { pts:pts, X:X, Y:Y, W:W, H:H };
+}
+function bindBenchHover(){
+  var cv = $("#bench-chart"), tip = $("#bench-tip");
+  if(!cv || !tip) return;
+  function hide(){ tip.style.opacity = 0; }
+  function move(ev){
+    var geo = window.benchGeo; if(!geo) return;
+    var rect = cv.getBoundingClientRect();
+    var cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left;
+    var best = 0, bd = Infinity;
+    for(var i=0;i<geo.pts.length;i++){ var d = Math.abs(geo.X(i)-cx); if(d<bd){ bd=d; best=i; } }
+    var p = geo.pts[best];
+    tip.innerHTML = p.date + "<br>我的账户 <b>" + pctStr(p.acct) + "</b><br>" +
+      esc(benchName(BENCH.secid)) + " " + pctStr(p.bench) + "<br>超额 <b>" + pctStr(p.acct-p.bench) + "</b>";
+    tip.style.left = Math.max(84, Math.min(geo.W-84, geo.X(best))) + "px";
+    tip.style.top = Math.max(52, geo.Y(Math.max(p.acct,p.bench))) + "px";
+    tip.style.opacity = 1;
+  }
+  cv.addEventListener("mousemove", move);
+  cv.addEventListener("mouseleave", hide);
+  cv.addEventListener("touchstart", move, {passive:true});
+  cv.addEventListener("touchmove", move, {passive:true});
+  cv.addEventListener("touchend", hide);
+}
+
+/* ==================== 月度盈亏：渲染 ==================== */
+function renderMonthly(){
+  var body = $("#month-body"), nav = $("#month-nav");
+  if(!body) return;
+  var dates = sortedDates();
+  if(!dates.length){
+    body.innerHTML = '<div class="empty">还没有历史记录<p>保存记录后这里会按月汇总</p></div>';
+    if(nav) nav.innerHTML = "";
+    return;
+  }
+  var pnl = dailyPnl();
+  var months = monthStats(pnl);
+  var keys = months.map(function(m){ return m.month; });
+  if(!monthView || keys.indexOf(monthView) < 0) monthView = keys[keys.length-1];
+  var idx = keys.indexOf(monthView), cur = months[idx];
+
+  if(nav){
+    nav.innerHTML = '<button class="btn sm" id="btn-month-prev"'+(idx<=0?" disabled":"")+'>‹ 上月</button>'+
+      '<b class="mono" style="min-width:64px; text-align:center; display:inline-block">'+monthView+'</b>'+
+      '<button class="btn sm" id="btn-month-next"'+(idx>=keys.length-1?" disabled":"")+'>下月 ›</button>';
+  }
+  var html = '<div class="summary" style="padding:0">';
+  html += sumCard("本月盈亏", signedMoney(cur.pnl), cur.ret===null?"—":pctStr(cur.ret), clsOf(cur.pnl), true);
+  html += sumCard("月初资产", money(cur.openV), cur.first, "");
+  html += sumCard("月末资产", money(cur.endV), cur.last, "");
+  html += sumCard("本月出入金", cur.flow?signedMoney(cur.flow):"—", cur.flow?"已剔除出盈亏":"无", cur.flow?clsOf(cur.flow):"flat");
+  html += sumCard("本月分红", cur.div?money(cur.div):"—", cur.div?"已计入收益":"无", cur.div?"up":"flat");
+  html += sumCard("记录天数", cur.days+" 天", cur.trades+" 笔操作", "");
+  html += '</div>';
+  html += '<div style="margin-top:14px">' + renderCalendar(monthView, pnl) + '</div>';
+  html += '<div class="hint" style="margin-top:10px">颜色越深表示当天盈亏金额越大（红涨绿跌）；当天盈亏已剔除出入金，只反映市场波动 + 分红。</div>';
+  html += '<div class="tblwrap" style="margin-top:16px"><table><thead><tr>'+
+    '<th>月份</th><th>月初资产</th><th>月末资产</th><th>当月盈亏</th><th>涨跌</th><th>出入金</th><th>分红</th><th>记录</th></tr></thead><tbody>';
+  for(var i=months.length-1;i>=0;i--){
+    var m = months[i];
+    html += '<tr>'+(m.month===monthView?'<td><b>'+m.month+'</b></td>':'<td>'+m.month+'</td>')+
+      '<td class="mono">'+money(m.openV)+'</td>'+
+      '<td class="mono">'+money(m.endV)+'</td>'+
+      '<td class="mono '+clsOf(m.pnl)+'">'+signedMoney(m.pnl)+'</td>'+
+      '<td class="mono '+clsOf(m.pnl)+'">'+(m.ret===null?"—":pctStr(m.ret))+'</td>'+
+      '<td class="mono '+(m.flow?clsOf(m.flow):"flat")+'">'+(m.flow?signedMoney(m.flow):"—")+'</td>'+
+      '<td class="mono '+(m.div?"up":"flat")+'">'+(m.div?money(m.div):"—")+'</td>'+
+      '<td class="mono">'+m.days+' 天</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  body.innerHTML = html;
+  var pv = $("#btn-month-prev"), nx = $("#btn-month-next");
+  if(pv) pv.addEventListener("click", function(){ if(idx>0){ monthView = keys[idx-1]; renderMonthly(); } });
+  if(nx) nx.addEventListener("click", function(){ if(idx<keys.length-1){ monthView = keys[idx+1]; renderMonthly(); } });
+}
+
+/* ==================== 多设备同步：渲染 ==================== */
+function syncRefreshButtons(){
+  var token = syncToken();
+  ["btn-sync-test","btn-sync-smart","btn-sync-push","btn-sync-list"].forEach(function(id){
+    var b = $("#"+id); if(b) b.disabled = !token;
+  });
+  var bp = $("#btn-sync-pull"); if(bp) bp.disabled = !(token && SYNC.gistId);
+  var st = $("#sync-status");
+  if(st && !SYNC.busy && !SYNC.err){
+    if(token && SYNC.gistId) st.textContent = "已连接" + (SYNC.login ? (" · " + SYNC.login) : "");
+    else if(token) st.textContent = "已填令牌 · 待创建 Gist";
+    else st.textContent = "未配置";
+  }
+}
+function renderSync(){
+  var el = $("#sync-body"), st = $("#sync-status");
+  if(!el) return;
+  var token = syncToken();
+  if(st){
+    if(SYNC.busy) st.innerHTML = '<span class="spin"></span>同步中…';
+    else if(SYNC.err) st.innerHTML = '<span class="warnc">'+esc(SYNC.err)+'</span>';
+    else if(token && SYNC.gistId) st.textContent = "已连接" + (SYNC.login ? (" · " + SYNC.login) : "");
+    else if(token) st.textContent = "已填令牌 · 待创建 Gist";
+    else st.textContent = "未配置";
+  }
+  var html = '';
+  html += '<div class="hint" style="margin-bottom:12px">把数据同步到你 GitHub 账号下的一个 Gist，换电脑 / 换浏览器时填同一个「令牌 + Gist ID」就能接着记账。<br>' +
+    '令牌只存在这台设备的浏览器里，不会写进导出的备份文件。建议单独创建一个<b>只勾选 gist 权限</b>的令牌。</div>';
+  html += '<div class="hint" style="margin-bottom:12px">🛡️ 本机是空数据时，<b>永远不会自动覆盖云端备份</b>：手动点上传会先弹窗确认，自动上传则直接跳过。</div>';
+  html += '<div class="grid2">' +
+    '<div class="field"><label>GitHub 访问令牌 (PAT)</label><input id="sync-token" type="password" autocomplete="off" placeholder="' +
+      (token ? "已保存 · 重新输入可覆盖" : "ghp_… 或 github_pat_…") + '"></div>' +
+    '<div class="field"><label>Gist ID</label><input id="sync-gistid" class="mono" value="'+esc(SYNC.gistId)+'" placeholder="留空则首次上传时自动创建"></div>' +
+    '</div>';
+  html += '<label class="row-inline" style="cursor:pointer; margin-bottom:12px"><input type="checkbox" id="sync-auto"' +
+    (SYNC.auto ? " checked" : "") + '><span>每次保存后自动上传（推荐）</span></label>';
+  html += '<div class="row-inline">' +
+    '<button class="btn primary" id="btn-sync-save">保存设置</button>' +
+    '<button class="btn" id="btn-sync-test"' + (token ? "" : " disabled") + '>测试连接</button>' +
+    '<button class="btn" id="btn-sync-smart"' + (token ? "" : " disabled") + '>智能同步</button>' +
+    '<button class="btn" id="btn-sync-push"' + (token ? "" : " disabled") + '>上传到云端</button>' +
+    '<button class="btn" id="btn-sync-pull"' + (token && SYNC.gistId ? "" : " disabled") + '>从云端恢复</button>' +
+    '<button class="btn" id="btn-sync-list"' + (token ? "" : " disabled") + '>从我的 Gist 选择</button>' +
+    ((token || SYNC.gistId) ? '<button class="btn danger" id="btn-sync-forget">重置同步设置</button>' : "") +
+    '</div>';
+  html += '<div id="sync-list" style="margin-top:12px"></div>';
+  html += '<div class="hint" style="margin-top:12px">上次上传 <b>'+esc(syncTime(SYNC.lastPushAt))+'</b> · 上次恢复 <b>'+esc(syncTime(SYNC.lastPullAt))+'</b></div>';
+  html += '<div class="hint" style="margin-top:8px">⚠️ GitHub 的 secret Gist 只是「不被公开列出」，拿到链接的人仍然能看到内容。别把这条 Gist 的链接发给别人。</div>';
+  el.innerHTML = html;
+
+  var tokEl = $("#sync-token");
+  if(tokEl) tokEl.addEventListener("input", function(){
+    syncSetToken(this.value.trim());
+    syncRefreshButtons();
+  });
+  var gidEl = $("#sync-gistid");
+  if(gidEl) gidEl.addEventListener("input", function(){
+    SYNC.gistId = this.value.trim();
+    syncSave(); syncRefreshButtons();
+  });
+  var autoEl = $("#sync-auto");
+  if(autoEl) autoEl.addEventListener("change", function(){ SYNC.auto = this.checked; syncSave(); });
+
+  var bs = $("#btn-sync-save");
+  if(bs) bs.addEventListener("click", function(){
+    var t = $("#sync-token").value.trim();
+    if(t) syncSetToken(t);
+    SYNC.gistId = $("#sync-gistid").value.trim();
+    SYNC.auto = $("#sync-auto").checked;
+    syncSave(); renderSync(); renderData();
+    logCommit("sync", "保存同步设置",
+      (SYNC.gistId ? ("Gist " + SYNC.gistId) : "未填 Gist ID") + (SYNC.auto ? " · 每次保存后自动上传" : " · 关闭自动上传"));
+    toast("同步设置已保存");
+  });
+  var bt = $("#btn-sync-test");
+  if(bt) bt.addEventListener("click", function(){
+    syncReadForm();
+    bt.disabled = true; bt.textContent = "测试中…";
+    syncTest().then(function(u){ logCommit("sync", "测试连接成功", "@" + u.login + " · 已确认 gist 权限"); toast("连接成功：@" + u.login); renderSync(); })
+      .catch(function(err){ logCommit("sync", "测试连接失败", err.message); toast("连接失败：" + err.message); renderSync(); });
+  });
+  var bsm = $("#btn-sync-smart");
+  if(bsm) bsm.addEventListener("click", function(){
+    syncReadForm();
+    syncSmart().then(function(){ renderSync(); })
+      .catch(function(err){ toast("同步失败：" + err.message); renderSync(); });
+  });
+  var bp = $("#btn-sync-push");
+  if(bp) bp.addEventListener("click", function(){
+    syncReadForm();
+    syncPush().catch(function(err){ toast("上传失败：" + err.message); });
+  });
+  var bl = $("#btn-sync-pull");
+  if(bl) bl.addEventListener("click", function(){
+    if(!confirm("将用云端数据覆盖本机全部数据，确认继续？\n\n当前数据会先自动存一份快照，可撤回。")) return;
+    syncReadForm();
+    syncPullApply().catch(function(){});
+  });
+  var bls = $("#btn-sync-list");
+  if(bls) bls.addEventListener("click", function(){
+    syncReadForm();
+    var box = $("#sync-list");
+    box.innerHTML = '<div class="hint"><span class="spin"></span>读取中…</div>';
+    syncListGists().then(function(list){
+      if(!list.length){ box.innerHTML = '<div class="hint">你的账号里还没有本应用的 Gist，先点「上传到云端」创建。</div>'; return; }
+      box.innerHTML = '<div class="hint" style="margin-bottom:6px">选择要把哪一份作为云端数据（点「用这个」即可填入并恢复）：</div>' +
+        '<div class="row-inline">' + list.map(function(g, i){
+          var when = g.updated_at ? new Date(g.updated_at).toLocaleString("zh-CN",{hour12:false}) : "";
+          return '<button class="btn sm" data-gist="'+esc(g.id)+'">'+esc(g.description || g.id)+' · '+esc(when)+'</button>';
+        }).join("") + '</div>';
+      $$("#sync-list [data-gist]").forEach(function(b){
+        b.addEventListener("click", function(){
+          SYNC.gistId = this.getAttribute("data-gist");
+          syncSave(); renderSync();
+          toast("已填入 Gist ID，可点「从云端恢复」");
+        });
+      });
+    }).catch(function(err){
+      box.innerHTML = '<div class="warnc">读取失败：' + esc(err.message) + '</div>';
+    });
+  });
+  var bf = $("#btn-sync-forget");
+  if(bf) bf.addEventListener("click", function(){
+    if(!confirm("重置本机保存的同步设置？\n\n会清空：访问令牌、Gist ID、上次上传/恢复时间。\n不会动：云端已有的 Gist、本机的持仓与历史记录。")) return;
+    var hadId = SYNC.gistId;
+    syncSetToken(""); SYNC.gistId = ""; SYNC.login = "";
+    SYNC.lastPushAt = 0; SYNC.lastPullAt = 0;
+    syncSave(); renderSync(); renderData();
+    logCommit("sync", "重置同步设置",
+      (hadId ? ("原 Gist " + hadId + " 仍保留在云端，可继续作为备份") : "尚未创建过 Gist") + " · 本机持仓未受影响");
+    toast("已重置同步设置");
+  });
+}
+
+function shortNum(v){
+  var a = Math.abs(v);
+  if(a>=1e8) return (v/1e8).toFixed(2)+"亿";
+  if(a>=1e4) return (v/1e4).toFixed(1)+"万";
+  return Math.round(v).toString();
+}
+function hexA(hex,a){
+  hex = (hex||"#2563eb").trim();
+  if(hex.charAt(0)!=="#") hex = "#2563eb";
+  if(hex.length===4) hex = "#"+hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3];
+  return "rgba("+parseInt(hex.slice(1,3),16)+","+parseInt(hex.slice(3,5),16)+","+parseInt(hex.slice(5,7),16)+","+a+")";
+}
+function drawChart(series){
+  var cv = $("#chart"), tip = $("#chart-tip");
+  var W = cv.parentElement.clientWidth || 320, H = 320;
+  var dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  cv.style.width = W+"px"; cv.style.height = H+"px";
+  var ctx = cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  var cLine = cssVar("--line") || "#e6e8ec", cMuted = cssVar("--muted") || "#6b7280";
+  var active = SERIES.filter(function(s){ return chartOn[s.key]; });
+
+  if(!series.length){
+    ctx.fillStyle = cMuted; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("暂无数据", W/2, H/2); window.chartGeo = null; tip.style.opacity = 0; return;
+  }
+  var padL=62, padR=16, padT=16, padB=28, W0=W-padL-padR, H0=H-padT-padB;
+  var vals = [];
+  series.forEach(function(s){ active.forEach(function(a){ vals.push(s[a.key]); }); });
+  if(!vals.length){ vals = [0, 1]; }
+  var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  if(max === min){ max = min + (Math.abs(min)*0.02 || 1); min = min - (Math.abs(min)*0.02 || 1); }
+  var pad = (max-min)*0.08; min -= pad; max += pad;
+  if(min > 0 && min < (max-min)) min = Math.max(0, min*0.98);
+  function X(i){ return series.length === 1 ? padL+W0/2 : padL + W0*i/(series.length-1); }
+  function Y(v){ return padT + H0*(1-(v-min)/(max-min)); }
+
+  ctx.font = "11px sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for(var g=0; g<=4; g++){
+    var v = min + (max-min)*g/4, y = Y(v);
+    ctx.strokeStyle = cLine; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, Math.round(y)+.5); ctx.lineTo(W-padR, Math.round(y)+.5); ctx.stroke();
+    ctx.fillStyle = cMuted; ctx.fillText(shortNum(v), padL-8, y);
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = cMuted;
+  var step = Math.max(1, Math.ceil(series.length/5));
+  for(var i=0;i<series.length;i+=step) ctx.fillText(series[i].date.slice(5), X(i), H-padB+8);
+  if((series.length-1)%step !== 0 && series.length>1) ctx.fillText(series[series.length-1].date.slice(5), X(series.length-1), H-padB+8);
+
+  if(chartOn.value || chartOn.total){
+    var areaKey = chartOn.total ? "total" : "value";
+    var ac = cssVar(chartOn.total ? "--c1" : "--c2");
+    var grad = ctx.createLinearGradient(0,padT,0,padT+H0);
+    grad.addColorStop(0, hexA(ac,.22)); grad.addColorStop(1, hexA(ac,.02));
+    ctx.beginPath();
+    series.forEach(function(s,i){ i ? ctx.lineTo(X(i),Y(s[areaKey])) : ctx.moveTo(X(i),Y(s[areaKey])); });
+    ctx.lineTo(X(series.length-1), padT+H0); ctx.lineTo(X(0), padT+H0); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+  }
+  active.forEach(function(a){
+    if(a.key === "total" || a.key === "value") return;
+    ctx.beginPath();
+    series.forEach(function(s,i){ i ? ctx.lineTo(X(i),Y(s[a.key])) : ctx.moveTo(X(i),Y(s[a.key])); });
+    ctx.strokeStyle = cssVar(a.color); ctx.lineWidth = a.width;
+    if(a.dash) ctx.setLineDash(a.dash);
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+  ["value","total"].forEach(function(k){
+    if(!chartOn[k]) return;
+    ctx.beginPath();
+    series.forEach(function(s,i){ i ? ctx.lineTo(X(i),Y(s[k])) : ctx.moveTo(X(i),Y(s[k])); });
+    ctx.strokeStyle = cssVar(k === "total" ? "--c1" : "--c2"); ctx.lineWidth = k === "total" ? 2.2 : 1.8;
+    ctx.lineJoin = "round"; ctx.stroke();
+  });
+  var dotStep = Math.max(1, Math.ceil(series.length/40));
+  var dotKey = chartOn.total ? "total" : (chartOn.value ? "value" : null);
+  if(dotKey){
+    ctx.fillStyle = cssVar(dotKey === "total" ? "--c1" : "--c2");
+    series.forEach(function(s,i){
+      if(i%dotStep && i !== series.length-1) return;
+      ctx.beginPath(); ctx.arc(X(i),Y(s[dotKey]), series.length>60?1.8:3, 0, Math.PI*2); ctx.fill();
+    });
+  }
+  window.chartGeo = { series:series, X:X, Y:Y, W:W, H:H };
+}
+function bindChartHover(){
+  var cv = $("#chart"), tip = $("#chart-tip");
+  function hide(){ tip.style.opacity = 0; }
+  function move(ev){
+    var geo = window.chartGeo; if(!geo) return;
+    var rect = cv.getBoundingClientRect();
+    var cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left;
+    var s = geo.series, best = 0, bd = Infinity;
+    for(var i=0;i<s.length;i++){ var d = Math.abs(geo.X(i)-cx); if(d<bd){ bd=d; best=i; } }
+    var p = s[best], profit = p.value-p.cost;
+    tip.innerHTML = p.date + "<br>总资产 " + money(p.total) + "<br>持仓市值 " + money(p.value) +
+      "<br>可用现金 " + money(p.cash) + "<br>浮动盈亏 <b>" + signedMoney(profit) + "</b>";
+    tip.style.left = Math.max(80, Math.min(geo.W-80, geo.X(best))) + "px";
+    tip.style.top = Math.max(56, geo.Y(p.total)) + "px";
+    tip.style.opacity = 1;
+  }
+  cv.addEventListener("mousemove", move);
+  cv.addEventListener("mouseleave", hide);
+  cv.addEventListener("touchstart", move, {passive:true});
+  cv.addEventListener("touchmove", move, {passive:true});
+  cv.addEventListener("touchend", hide);
+}
+
+/* ==================== 数据安全：自动快照 ==================== */
+function snapshotStats(dataStr){
+  try{
+    var o = JSON.parse(dataStr);
+    var days = Object.keys(o.days || {}).filter(function(d){ return o.days[d] && o.days[d].totals; }).sort();
+    var trades = 0;
+    Object.keys(o.days || {}).forEach(function(d){ trades += ((o.days[d] && o.days[d].trades) || []).length; });
+    var last = days.length ? days[days.length-1] : null;
+    var t = last ? o.days[last].totals : null;
+    var cash = (last && typeof o.days[last].cash === "number") ? o.days[last].cash : 0;
+    return { holdings:(o.holdings||[]).length, days:days.length, trades:trades,
+             total: t ? (t.value + cash) : 0, lastDate:last, secids:(o.holdings||[]).filter(function(h){ return h.market && h.code; }).length };
+  }catch(e){ return { holdings:0, days:0, trades:0, total:0, lastDate:null, secids:0 }; }
+}
+function snapshots(){
+  try{ var raw = localStorage.getItem(SNAP_KEY); var a = raw ? JSON.parse(raw) : []; return Array.isArray(a) ? a : []; }
+  catch(e){ return []; }
+}
+function writeSnapshots(list){
+  try{ localStorage.setItem(SNAP_KEY, JSON.stringify(list)); }
+  catch(e){
+    try{ localStorage.setItem(SNAP_KEY, JSON.stringify(list.slice(0, Math.max(3, Math.ceil(list.length/3))))); }
+    catch(e2){ console.warn("快照写入失败（存储空间不足）", e2); }
+  }
+}
+// 在当前状态「变更之前」留一份；状态未变化则不重复存
+// 快照里不带操作日志：日志只增不改，没必要每份快照都抄一遍（否则几十份快照会把浏览器存储撑爆）
+function snapshotState(){
+  var copy = {};
+  Object.keys(state).forEach(function(k){ if(k !== "log") copy[k] = state[k]; });
+  return copy;
+}
+function takeSnapshot(reason){
+  var data;
+  try{ data = JSON.stringify(snapshotState()); }catch(e){ return null; }
+  var list = snapshots();
+  if(list.length && list[0].data === data) return null;
+  list.unshift({ ts: Date.now(), reason: reason || "自动", data: data, stats: snapshotStats(data) });
+  var total = 0;
+  list = list.filter(function(s, i){ total += (s.data || "").length; return i < SNAP_MAX && total < SNAP_BYTES_MAX; });
+  writeSnapshots(list);
+  return list[0] || null;
+}
+function restoreSnapshot(ts){
+  var list = snapshots(), s = null;
+  for(var i=0;i<list.length;i++) if(list[i].ts === ts) s = list[i];
+  if(!s){ toast("快照不存在"); return; }
+  var st = s.stats || {};
+  var cur = { holdings:state.holdings.length, days:sortedDates().length };
+  if(!confirm("恢复到 " + new Date(ts).toLocaleString("zh-CN",{hour12:false}) + " 的数据？\n\n" +
+      "快照内容：" + st.holdings + " 个持仓 · " + st.days + " 天记录 · " + st.trades + " 笔交易\n" +
+      "当前数据：" + cur.holdings + " 个持仓 · " + cur.days + " 天记录\n\n" +
+      "当前数据会先自动存一份快照，之后仍可撤回。")) return;
+  takeSnapshot("恢复前");
+  try{
+    var o = JSON.parse(s.data), keepLog = state.log;
+    state.holdings = Array.isArray(o.holdings) ? o.holdings : [];
+    state.days = (o.days && typeof o.days === "object") ? o.days : {};
+    state.settings = Object.assign({}, state.settings, o.settings || {});
+    state.log = keepLog;   // 日志不跟着快照回滚
+    logAdd("data", "恢复到快照", new Date(ts).toLocaleString("zh-CN",{hour12:false}) + " · " + (s.reason || "自动"));
+    migrate();
+    ui.draft = {}; ui.dirty = false; QUOTE.map = {}; QUOTE.ts = 0;
+    save();
+    toast("已恢复到 " + new Date(ts).toLocaleString("zh-CN",{hour12:false}));
+    renderAll();
+  }catch(e){ alert("这份快照已损坏，无法恢复。"); }
+}
+function renderSnapshots(){
+  var el = $("#snap-list"); if(!el) return;
+  var list = snapshots();
+  if(!list.length){
+    el.innerHTML = '<div class="empty">还没有快照<p>保存一次记录后，这里就会开始积累版本</p></div>';
+    return;
+  }
+  var show = ui.snapAll ? list : list.slice(0, 8);
+  var html = '<div class="tblwrap"><table><thead><tr>'+
+    '<th>时间</th><th>触发</th><th>持仓</th><th>记录天数</th><th>交易</th><th>总资产</th><th>操作</th>'+
+    '</tr></thead><tbody>';
+  show.forEach(function(s){
+    var d = new Date(s.ts), st = s.stats || {};
+    html += '<tr><td>'+d.toLocaleString("zh-CN",{hour12:false})+'</td>'+
+      '<td>'+esc(s.reason||"自动")+'</td>'+
+      '<td class="mono">'+(st.holdings||0)+'</td>'+
+      '<td class="mono">'+(st.days||0)+'</td>'+
+      '<td class="mono">'+(st.trades||0)+'</td>'+
+      '<td class="mono">'+money(st.total||0)+'</td>'+
+      '<td><button class="btn sm" data-snap-restore="'+s.ts+'">恢复</button> '+
+          '<button class="btn sm" data-snap-dl="'+s.ts+'">下载</button></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  if(list.length > 8){
+    html += '<div class="row-inline" style="margin-top:10px"><button class="btn sm" id="btn-snap-toggle">'+
+            (ui.snapAll ? "收起" : ("展开全部 " + list.length + " 份")) + '</button></div>';
+  }
+  el.innerHTML = html;
+  $$("#snap-list [data-snap-restore]").forEach(function(b){
+    b.addEventListener("click", function(){ restoreSnapshot(parseInt(this.getAttribute("data-snap-restore"),10)); });
+  });
+  $$("#snap-list [data-snap-dl]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var ts = parseInt(this.getAttribute("data-snap-dl"),10), list2 = snapshots(), s2 = null;
+      for(var i=0;i<list2.length;i++) if(list2[i].ts === ts) s2 = list2[i];
+      if(!s2) return;
+      download("持仓快照_" + new Date(ts).toISOString().slice(0,19).replace(/[:T]/g,"-") + ".json", s2.data, "application/json");
+      logCommit("data", "下载快照", new Date(ts).toLocaleString("zh-CN",{hour12:false}) + " · " + (s2.reason || "自动"));
+    });
+  });
+  var tg = $("#btn-snap-toggle");
+  if(tg) tg.addEventListener("click", function(){ ui.snapAll = !ui.snapAll; renderSnapshots(); });
+}
+
+/* ==================== 数据安全：自动备份到文件 ==================== */
+function fbSupported(){ return typeof window.showSaveFilePicker === "function"; }
+function idbRun(mode, fn){
+  return new Promise(function(resolve, reject){
+    var req;
+    try{ req = indexedDB.open("portfolio-backup", 1); }catch(e){ reject(e); return; }
+    req.onupgradeneeded = function(){ try{ req.result.createObjectStore("kv"); }catch(e){} };
+    req.onerror = function(){ reject(req.error); };
+    req.onsuccess = function(){
+      var db = req.result;
+      try{
+        var tx = db.transaction("kv", mode), store = tx.objectStore("kv"), r = fn(store);
+        tx.oncomplete = function(){ db.close(); resolve(r ? r.result : undefined); };
+        tx.onerror = function(){ db.close(); reject(tx.error); };
+      }catch(e){ db.close(); reject(e); }
+    };
+  });
+}
+function fbLastTime(){
+  try{ var v = parseInt(localStorage.getItem(FB_TIME_KEY),10); return isFinite(v) ? v : 0; }catch(e){ return 0; }
+}
+function fbSetLastTime(ts){ try{ localStorage.setItem(FB_TIME_KEY, String(ts)); }catch(e){} }
+function fbWrite(allowPrompt){
+  if(!fileHandle) return Promise.resolve(false);
+  return fileHandle.queryPermission({ mode:"readwrite" }).then(function(p){
+    if(p === "granted") return p;
+    if(!allowPrompt){ fileBackupErr = "待重新授权，点「立即写入一次」"; renderBackup(); return "need"; }
+    return fileHandle.requestPermission({ mode:"readwrite" });
+  }).then(function(p){
+    if(p === "need") return false;
+    if(p !== "granted"){ fileBackupErr = "未授权写入"; renderBackup(); return false; }
+    return fileHandle.createWritable().then(function(w){
+      var text = JSON.stringify(Object.assign({}, state, { __backupAt: new Date().toISOString(), __app: "每日持仓记录" }), null, 2);
+      return w.write(text).then(function(){ return w.close(); });
+    }).then(function(){
+      fbSetLastTime(Date.now()); fileBackupErr = ""; renderBackup(); return true;
+    });
+  }).catch(function(e){
+    fileBackupErr = (e && e.name === "NotAllowedError") ? "未授权写入" : ((e && e.message) || "写入失败");
+    renderBackup(); return false;
+  });
+}
+function fbSchedule(){
+  if(!fileHandle) return;
+  clearTimeout(fileBackupTimer);
+  fileBackupTimer = setTimeout(function(){ fbWrite(false); }, 2500);
+}
+function fbPick(){
+  if(!fbSupported()){ toast("当前浏览器不支持，建议用 Chrome / Edge 打开"); return; }
+  window.showSaveFilePicker({
+    suggestedName: "持仓记录_自动备份.json",
+    types: [{ description:"备份文件", accept:{ "application/json":[".json"] } }]
+  }).then(function(h){
+    fileHandle = h;
+    return idbRun("readwrite", function(store){ return store.put(h, "fileHandle"); });
+  }).then(function(){
+    return fbWrite(true);
+  }).then(function(ok){
+    if(ok) toast("已开启自动备份，每次保存都会写入该文件");
+    logCommit("setting", "开启自动备份到文件", ((fileHandle && fileHandle.name) || "已选文件") + (ok ? "" : " · 首次写入失败"));
+    renderBackup();
+  }).catch(function(e){
+    if(e && e.name === "AbortError") return;
+    toast("开启失败：" + ((e && e.message) || "浏览器限制"));
+  });
+}
+function fbDisable(){
+  fileHandle = null;
+  idbRun("readwrite", function(store){ return store.delete("fileHandle"); }).catch(function(){});
+  try{ localStorage.removeItem(FB_TIME_KEY); }catch(e){}
+  logCommit("setting", "关闭自动备份到文件");
+  toast("已关闭自动备份"); renderBackup();
+}
+function fbRestoreFromIDB(){
+  if(!fbSupported()) return Promise.resolve(null);
+  return idbRun("readonly", function(store){ return store.get("fileHandle"); }).then(function(h){
+    if(h){ fileHandle = h; }
+    return h;
+  }).catch(function(){ return null; });
+}
+function renderBackup(){
+  var st = $("#fb-status"), ac = $("#fb-actions"), desc = $("#fb-desc");
+  if(!st || !ac) return;
+  if(!fbSupported()){
+    st.textContent = "当前浏览器不支持";
+    desc.innerHTML = "这个功能需要 Chrome / Edge 等支持「文件系统访问」的浏览器。<br>" +
+      "用 Safari 的话，请改用下面的「导出备份」，或双击文件夹里的 <b>本地启动.command</b> 换用其它浏览器打开。";
+    ac.innerHTML = "";
+    return;
+  }
+  if(fileHandle){
+    var last = fbLastTime();
+    st.innerHTML = fileBackupErr
+      ? '<span class="warnc">'+esc(fileBackupErr)+'</span>'
+      : (last ? ('已开启 · 最后写入 '+new Date(last).toLocaleString("zh-CN",{hour12:false})) : "已开启");
+    ac.innerHTML = '<button class="btn primary" id="fb-write">立即写入一次</button>' +
+                   '<button class="btn danger" id="fb-off">关闭自动备份</button>';
+    var w = $("#fb-write"); if(w) w.addEventListener("click", function(){
+      fbWrite(true).then(function(ok){
+        toast(ok ? "已写入备份文件" : "写入失败，请检查授权");
+        logCommit("setting", ok ? "手动写入备份文件" : "手动写入备份文件失败", ((fileHandle && fileHandle.name) || ""));
+      });
+    });
+    var o = $("#fb-off"); if(o) o.addEventListener("click", fbDisable);
+  }else{
+    st.textContent = "未开启";
+    ac.innerHTML = '<button class="btn primary" id="fb-pick">选择备份文件</button>' +
+                   '<button class="btn" id="fb-restore">从已有备份恢复</button>';
+    var pk = $("#fb-pick"); if(pk) pk.addEventListener("click", fbPick);
+    var rs = $("#fb-restore"); if(rs) rs.addEventListener("click", function(){ $("#file-input").click(); });
+  }
+}
+
+/* ==================== 数据安全：总览与提醒 ==================== */
+function daysSince(ts){ return ts ? Math.floor((Date.now()-ts)/86400000) : null; }
+function renderSafety(){
+  var el = $("#safety-body"), badge = $("#safety-badge");
+  if(!el) return;
+  var snaps = snapshots(), list2 = sortedDates();
+  var hasData = state.holdings.length > 0 || list2.length > 0;
+  var exp = state.settings.lastExportAt;
+  var expDays = daysSince(exp);
+  var fbLast = fbLastTime();
+  var items = [];
+
+  items.push(row(hasData ? "✅" : "⚠️", "本地数据",
+    hasData ? (state.holdings.length + " 个持仓 · " + list2.length + " 天记录 · " + tradeEntries().length + " 笔交易")
+            : "暂无数据"));
+
+  items.push(row("✅", "浏览器存储状态",
+    storageOK ? "可正常写入" : "不可用（隐私模式？）"));
+
+  items.push(row(snaps.length ? "✅" : "⚠️", "自动快照",
+    snaps.length ? (snaps.length + " 份 · 最近一份 " + new Date(snaps[0].ts).toLocaleString("zh-CN",{hour12:false}))
+                 : "还没有快照，保存一次记录后开始积累"));
+
+  items.push(row(fileHandle ? "✅" : "○", "文件自动备份",
+    fileHandle ? (fbLast ? ("已开启 · 最后写入 " + new Date(fbLast).toLocaleString("zh-CN",{hour12:false})) : "已开启")
+               : "未开启（建议开启，防浏览器数据丢失）"));
+
+  var expTxt = exp ? (daysSince(exp) === 0 ? "今天已导出" : (expDays + " 天前导出")) : "从未导出";
+  items.push(row(exp && expDays < 14 ? "✅" : "⚠️", "手动导出备份", expTxt));
+
+  el.innerHTML = items.join("");
+  if(badge){
+    var warn = (!fileHandle && fbSupported()) || !snaps.length || (exp && expDays >= 14);
+    badge.innerHTML = warn ? '<span class="warnc">建议完善下方两项</span>' : '<span class="hint">状态良好</span>';
+  }
+}
+function row(icon, title, desc){
+  return '<div class="row-inline" style="padding:7px 0; align-items:flex-start">'+
+    '<span style="width:20px; flex:none">'+icon+'</span>'+
+    '<b style="min-width:112px; flex:none; font-weight:600">'+esc(title)+'</b>'+
+    '<span class="hint" style="flex:1">'+desc+'</span></div>';
+}
+function renderBanners(){
+  var html = "";
+  if(!storageOK){
+    html += '<div class="banner">⚠️ 当前浏览器禁用了本地存储（可能是隐私模式），数据无法自动保存。请使用「数据备份 → 导出」手动保存。</div>';
+  }
+  var snaps = snapshots();
+  var hasData = state.holdings.length > 0 || sortedDates().length > 0;
+  // 数据疑似丢失，但有快照可救
+  if(!hasData && snaps.length){
+    var st = snaps[0].stats || {};
+    if(st.holdings || st.days){
+      html += '<div class="banner">🆘 检测到本地数据为空，但存在 '+snaps.length+' 份历史快照（最近一份：'+
+        new Date(snaps[0].ts).toLocaleString("zh-CN",{hour12:false})+'，含 '+st.holdings+' 个持仓 / '+st.days+' 天记录）。'+
+        ' <button class="btn sm" id="banner-restore">立即恢复</button></div>';
+    }
+  }
+  if(hasData){
+    var exp = state.settings.lastExportAt, d = daysSince(exp);
+    if(d === null || d >= 14){
+      html += '<div class="banner">💾 '+(d === null ? "还从未导出过备份" : ("已经 "+d+" 天没有导出备份了"))+
+        '。建议导出一份存到网盘或 U 盘。 <button class="btn sm" id="banner-export">现在导出</button></div>';
+    }
+  }
+  $("#store-warn").innerHTML = html;
+  var br = $("#banner-restore");
+  if(br) br.addEventListener("click", function(){ if(snaps.length) restoreSnapshot(snaps[0].ts); });
+  var be = $("#banner-export");
+  if(be) be.addEventListener("click", exportJSON);
+}
+
+/* ==================== 数据 ==================== */
+function renderData(){
+  var size = 0;
+  try{ size = (localStorage.getItem(STORE_KEY)||"").length; }catch(e){}
+  var nTr = tradeEntries().length;
+  $("#data-stat").textContent = state.holdings.length + " 个持仓 · " + nTr + " 笔交易 · " +
+    sortedDates().length + " 天记录 · 约 " + (size/1024).toFixed(1) + " KB";
+  var cb = $("#opt-autofetch"); if(cb) cb.checked = !!state.settings.autoFetch;
+  renderSafety(); renderSnapshots(); renderBackup(); renderSync();
+}
+function download(name, text, mime){
+  var blob = new Blob([text], {type: mime || "text/plain;charset=utf-8"});
+  var url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+function exportJSON(){
+  download("持仓备份_" + todayStr() + ".json", JSON.stringify(state, null, 2), "application/json");
+  state.settings.lastExportAt = Date.now();
+  logAdd("data", "导出备份 (JSON)",
+    "持仓 " + state.holdings.length + " 个 · " + sortedDates().length + " 天记录 · " + logCount() + " 条日志");
+  save(); renderData();
+  toast("已导出备份，请保存到网盘或 U 盘");
+}
+function exportCSV(){
+  var dates = sortedDates();
+  if(!dates.length){ toast("还没有历史记录"); return; }
+  var rows = [["日期","总资产","持仓市值","总成本","可用现金","出入金净额","浮动盈亏","收益率%","操作笔数"]];
+  dates.forEach(function(d){
+    var t = state.days[d].totals, c = cashOf(d);
+    rows.push([d, (t.value+c).toFixed(2), t.value.toFixed(2), t.cost.toFixed(2), c.toFixed(2),
+               flowNet(state.days[d].flows).toFixed(2),
+               t.profit.toFixed(2), t.profitPct.toFixed(2), (state.days[d].trades||[]).length]);
+  });
+  download("持仓历史_" + todayStr() + ".csv", "\ufeff" + rows.map(function(r){ return r.join(","); }).join("\n"), "text/csv;charset=utf-8");
+  logCommit("data", "导出历史 CSV", dates.length + " 天记录");
+  toast("已导出 CSV");
+}
+function exportTradeCSV(){
+  var list = tradeEntries();
+  if(!list.length){ toast("还没有交易记录"); return; }
+  var rows = [["日期","方向","名称","代码","市场","数量","价格","手续费","净额","备注"]];
+  list.forEach(function(e){
+    var tr = e.tr, amt = (toNum(tr.shares)||0)*(toNum(tr.price)||0), fee = toNum(tr.fee)||0;
+    var net = tr.side === "sell" ? amt-fee : -(amt+fee);
+    rows.push([e.date, tr.side === "sell" ? "卖出":"买入", tr.name||"", tr.code||"", tr.market||"",
+      (toNum(tr.shares)||0), (toNum(tr.price)||0), fee.toFixed(2), net.toFixed(2), (tr.note||"").replace(/,/g,"，")]);
+  });
+  download("交易流水_" + todayStr() + ".csv", "\ufeff" + rows.map(function(r){ return r.join(","); }).join("\n"), "text/csv;charset=utf-8");
+  logCommit("data", "导出交易流水 CSV", list.length + " 笔");
+  toast("已导出交易流水");
+}
+function exportFlowCSV(){
+  var list = flowEntries();
+  if(!list.length){ toast("还没有出入金记录"); return; }
+  var rows = [["日期","方向","金额","备注"]];
+  list.forEach(function(e){
+    rows.push([e.date, e.fl.side === "out" ? "转出" : "转入",
+               (toNum(e.fl.amount)||0).toFixed(2), (e.fl.note||"").replace(/,/g,"，")]);
+  });
+  download("出入金流水_" + todayStr() + ".csv", "\ufeff" + rows.map(function(r){ return r.join(","); }).join("\n"), "text/csv;charset=utf-8");
+  logCommit("data", "导出入金流水 CSV", list.length + " 笔");
+  toast("已导出入金流水");
+}
+function exportDivCSV(){
+  var list = divEntries();
+  if(!list.length){ toast("还没有分红送股记录"); return; }
+  var r = replay(null);
+  var rows = [["日期","类型","名称","代码","市场","依据","现金分红","新增股数","备注"]];
+  list.forEach(function(e){
+    var dv = e.dv, info = r.div[dv.id] || null;
+    var basis = dv.mode === "total"
+      ? (dv.kind === "cash" ? ("总额 " + (toNum(dv.amount)||0)) : ("共 " + (toNum(dv.shares)||0) + " 股"))
+      : ("每10股 " + (toNum(dv.per10)||0) + (dv.kind === "cash" ? "元" : "股"));
+    rows.push([e.date, divKindLabel(dv.kind), dv.name||"", dv.code||"", dv.market||"", basis,
+      info ? info.amount.toFixed(2) : "0.00",
+      info ? trimNum(info.addShares,4) : "0",
+      (dv.note||"").replace(/,/g,"，")]);
+  });
+  download("分红送股_" + todayStr() + ".csv", "\ufeff" + rows.map(function(r2){ return r2.join(","); }).join("\n"), "text/csv;charset=utf-8");
+  logCommit("data", "导出分红送股 CSV", list.length + " 笔");
+  toast("已导出分红送股流水");
+}
+function importJSON(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try{
+      var obj = JSON.parse(reader.result);
+      if(!obj || !Array.isArray(obj.holdings)) throw new Error("格式不正确");
+      if(!confirm("导入将覆盖当前全部数据，确认继续？\n\n当前数据会先自动存一份快照，可撤回。")) return;
+      takeSnapshot("导入备份前");
+      state.holdings = obj.holdings;
+      state.days = (obj.days && typeof obj.days === "object") ? obj.days : {};
+      state.settings = (obj.settings && typeof obj.settings === "object") ? obj.settings : {};
+      state.log = logMerge(state.log, obj.log);
+      logAdd("data", "导入备份",
+        "持仓 " + state.holdings.length + " 个 · " + Object.keys(state.days).length + " 天记录 · 日志合并后 " + logCount() + " 条");
+      migrate(); ui.draft = {}; ui.dirty = false; QUOTE.map = {}; QUOTE.ts = 0;
+      save(); toast("导入成功"); renderAll();
+    }catch(e){ alert("导入失败：文件格式不正确\n" + e.message); }
+  };
+  reader.readAsText(file);
+}
+
+/* ==================== 操作日志 ==================== */
+var LOG_TYPES = [
+  { k:"daily",   label:"每日记录" },
+  { k:"trade",   label:"买卖交易" },
+  { k:"flow",    label:"出入金" },
+  { k:"div",     label:"分红送股" },
+  { k:"holding", label:"持仓管理" },
+  { k:"data",    label:"数据操作" },
+  { k:"sync",    label:"同步备份" },
+  { k:"quote",   label:"行情抓取" },
+  { k:"setting", label:"设置" }
+];
+var logView = { type:"", q:"", from:"", to:"", limit:200 };
+
+function logCount(){ return Array.isArray(state.log) ? state.log.length : 0; }
+function logLabel(k){
+  for(var i=0;i<LOG_TYPES.length;i++){ if(LOG_TYPES[i].k === k) return LOG_TYPES[i].label; }
+  return "其他";
+}
+function tsDateStr(ts){ var d = new Date(ts); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+function tsTimeStr(ts){ var d = new Date(ts); return pad2(d.getHours())+":"+pad2(d.getMinutes())+":"+pad2(d.getSeconds()); }
+// 记一条操作日志（只改内存，不写盘）
+function logAdd(type, text, detail){
+  if(!Array.isArray(state.log)) state.log = [];
+  state.log.unshift({ ts:Date.now(), type:type, text:String(text==null?"":text), detail:String(detail==null?"":detail) });
+  if(state.log.length > LOG_MAX) state.log.length = LOG_MAX;
+  if(ui.tab === "log") renderLog();
+  return state.log[0];
+}
+// 记日志并立刻落盘。用于那些本来不会走 save() 的操作（在草稿里加一笔、导出 CSV…）
+// 刻意不走 syncSchedule：否则「同步成功 → 写日志 → 又排队同步」会自己触发自己
+function logCommit(type, text, detail){
+  logAdd(type, text, detail);
+  savePersist();
+  fbSchedule();
+}
+// 合并两份日志（导入备份 / 从云端恢复时用）：按时间倒序、去重
+function logMerge(a, b){
+  var seen = {}, out = [];
+  (Array.isArray(a)?a:[]).concat(Array.isArray(b)?b:[]).forEach(function(e){
+    if(!e || typeof e.ts !== "number") return;
+    var key = e.ts + "|" + (e.type||"") + "|" + (e.text||"");
+    if(seen[key]) return;
+    seen[key] = 1; out.push(e);
+  });
+  out.sort(function(x,y){ return y.ts - x.ts; });
+  return out.slice(0, LOG_MAX);
+}
+function logMatches(e, f){
+  if(f.type && e.type !== f.type) return false;
+  if(f.q){
+    var q = f.q.toLowerCase();
+    if((e.text||"").toLowerCase().indexOf(q) < 0 && (e.detail||"").toLowerCase().indexOf(q) < 0) return false;
+  }
+  var d = tsDateStr(e.ts);
+  if(f.from && d < f.from) return false;
+  if(f.to && d > f.to) return false;
+  return true;
+}
+function renderLogFilters(){
+  var sel = $("#log-type");
+  if(sel && !sel.options.length){
+    sel.innerHTML = '<option value="">全部类型</option>' + LOG_TYPES.map(function(t){
+      return '<option value="'+t.k+'">'+esc(t.label)+'</option>';
+    }).join("");
+  }
+}
+function renderLog(){
+  renderLogFilters();
+  var el = $("#log-body"); if(!el) return;
+  var all = Array.isArray(state.log) ? state.log : [];
+  var list = all.filter(function(e){ return logMatches(e, logView); });
+  var show = list.slice(0, logView.limit);
+  var stat = $("#log-stat");
+  if(stat){
+    stat.textContent = "共 " + all.length + " 条" +
+      (list.length !== all.length ? (" · 筛选出 " + list.length + " 条") : "") +
+      (all.length >= LOG_MAX ? ("（只保留最近 " + LOG_MAX + " 条）") : "");
+  }
+  if(!all.length){
+    el.innerHTML = '<div class="empty">还没有操作记录<p>以后每一次记一笔、改持仓、导入导出，都会自动留痕</p></div>';
+    return;
+  }
+  if(!list.length){
+    el.innerHTML = '<div class="empty">没有匹配的记录<p>换个关键词，或者把时间范围放宽试试</p></div>';
+    return;
+  }
+  var html = '<div class="tblwrap"><table><thead><tr>'+
+    '<th style="width:152px">时间</th><th style="width:92px">类型</th><th>操作</th><th>详情</th>'+
+    '</tr></thead><tbody>';
+  show.forEach(function(e){
+    html += '<tr>'+
+      '<td class="mono" style="white-space:nowrap">'+esc(tsDateStr(e.ts))+' '+esc(tsTimeStr(e.ts))+'</td>'+
+      '<td><span class="logtag log-'+esc(e.type||"other")+'">'+esc(logLabel(e.type))+'</span></td>'+
+      '<td>'+esc(e.text)+'</td>'+
+      '<td style="color:var(--muted)">'+esc(e.detail)+'</td>'+
+    '</tr>';
+  });
+  html += '</tbody></table></div>';
+  var rest = list.length - show.length;
+  if(rest > 0){
+    html += '<div class="row-inline" style="margin-top:10px"><button class="btn sm" id="btn-log-more">'+
+            '再显示 ' + Math.min(200, rest) + ' 条（还有 ' + rest + ' 条）</button></div>';
+  }
+  el.innerHTML = html;
+  var more = $("#btn-log-more");
+  if(more) more.addEventListener("click", function(){ logView.limit += 200; renderLog(); });
+}
+function exportLogCSV(){
+  var all = Array.isArray(state.log) ? state.log : [];
+  if(!all.length){ toast("还没有操作记录"); return; }
+  var list = all.filter(function(e){ return logMatches(e, logView); });
+  if(!list.length){ toast("当前筛选条件下没有记录"); return; }
+  var rows = [["时间","类型","操作","详情"]];
+  list.forEach(function(e){
+    rows.push([tsDateStr(e.ts) + " " + tsTimeStr(e.ts), logLabel(e.type),
+      (e.text||"").replace(/,/g,"，"), (e.detail||"").replace(/,/g,"，")]);
+  });
+  download("操作日志_" + todayStr() + ".csv",
+    "\ufeff" + rows.map(function(r){ return r.join(","); }).join("\n"), "text/csv;charset=utf-8");
+  logCommit("data", "导出操作日志", list.length + " 条");
+  toast("已导出操作日志");
+}
+function clearLog(){
+  var n = logCount();
+  if(!n){ toast("还没有操作记录"); return; }
+  if(!confirm("清空全部 " + n + " 条操作日志？\n\n日志只是操作痕迹，清空它不会动到你的持仓、交易和历史记录。")) return;
+  state.log = [];
+  logAdd("data", "清空操作日志", "原有 " + n + " 条");
+  save(); renderLog();
+  toast("已清空操作日志");
+}
+function bindLogEvents(){
+  var type = $("#log-type"), q = $("#log-q"), from = $("#log-from"), to = $("#log-to");
+  function reset(){ logView.limit = 200; renderLog(); }
+  if(type) type.addEventListener("change", function(){ logView.type = this.value; reset(); });
+  if(q) q.addEventListener("input", function(){ logView.q = this.value.trim(); reset(); });
+  if(from) from.addEventListener("change", function(){ logView.from = this.value; reset(); });
+  if(to) to.addEventListener("change", function(){ logView.to = this.value; reset(); });
+  $$("[data-log-range]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var r = this.getAttribute("data-log-range"), t = todayStr(), d = new Date();
+      if(r === "today"){ logView.from = t; logView.to = t; }
+      else if(r === "7"){ d.setDate(d.getDate()-6); logView.from = tsDateStr(d.getTime()); logView.to = t; }
+      else if(r === "30"){ d.setDate(d.getDate()-29); logView.from = tsDateStr(d.getTime()); logView.to = t; }
+      else { logView.from = ""; logView.to = ""; }
+      if(from) from.value = logView.from;
+      if(to) to.value = logView.to;
+      reset();
+    });
+  });
+  var ex = $("#btn-log-export"); if(ex) ex.addEventListener("click", exportLogCSV);
+  var cl = $("#btn-log-clear"); if(cl) cl.addEventListener("click", clearLog);
+  var rs = $("#btn-log-reset"); if(rs) rs.addEventListener("click", function(){
+    logView = { type:"", q:"", from:"", to:"", limit:200 };
+    if(type) type.value = ""; if(q) q.value = ""; if(from) from.value = ""; if(to) to.value = "";
+    renderLog();
+  });
+}
+
+/* ==================== 标签页 / 主题 ==================== */
+function switchTab(tab){
+  ui.tab = tab;
+  $$(".tab").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab") === tab); });
+  $("#view-daily").hidden = tab !== "daily";
+  $("#view-holdings").hidden = tab !== "holdings";
+  $("#view-trend").hidden = tab !== "trend";
+  $("#view-data").hidden = tab !== "data";
+  $("#view-log").hidden = tab !== "log";
+  if(tab === "daily") renderDaily();
+  if(tab === "holdings") renderHoldings();
+  if(tab === "trend") renderTrend();
+  if(tab === "data") renderData();
+  if(tab === "log") renderLog();
+}
+function renderAll(){
+  renderHeader(); renderStoreWarning();
+  if(ui.tab === "daily") renderDaily();
+  if(ui.tab === "holdings") renderHoldings();
+  if(ui.tab === "trend") renderTrend();
+  if(ui.tab === "log") renderLog();
+  renderData();
+}
+function initTheme(){
+  var saved = null;
+  try{ saved = localStorage.getItem("portfolio-theme"); }catch(e){}
+  if(saved) document.documentElement.setAttribute("data-theme", saved);
+  updateThemeBtn();
+}
+function toggleTheme(){
+  var cur = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", cur);
+  try{ localStorage.setItem("portfolio-theme", cur); }catch(e){}
+  updateThemeBtn();
+  if(ui.tab === "trend") renderTrend();
+  if(ui.tab === "daily") renderDaily();
+}
+function updateThemeBtn(){
+  $("#btn-theme").textContent = document.documentElement.getAttribute("data-theme") === "dark" ? "☀️ 浅色" : "🌙 深色";
+}
+
+/* ==================== 事件 ==================== */
+function bindAcInput(inputEl, target){
+  inputEl.addEventListener("input", function(){
+    if(target === "trade"){ if(tPicked && tPicked.name !== this.value) tPicked = null; updateTradePreview(); }
+    else { if(pickedSec && pickedSec.name !== this.value){ pickedSec = null; renderPicked(); } }
+    var q = this.value.trim();
+    clearTimeout(acTimer);
+    if(!q){ hideAc(target); return; }
+    acTimer = setTimeout(function(){ doSearch(q, target); }, 220);
+  });
+  inputEl.addEventListener("keydown", function(e){
+    var el = $("#" + (target === "trade" ? "t-ac" : "f-ac"));
+    if(!el || el.hidden || !acResults.length) return;
+    if(e.key === "ArrowDown"){ e.preventDefault(); setAcIndex(Math.min(acResults.length-1, acIndex+1)); }
+    else if(e.key === "ArrowUp"){ e.preventDefault(); setAcIndex(Math.max(0, acIndex-1)); }
+    else if(e.key === "Enter"){ e.preventDefault(); e.stopPropagation(); pickAc(acIndex < 0 ? 0 : acIndex); }
+    else if(e.key === "Escape"){ hideAc(target); }
+  });
+}
+function bindEvents(){
+  $$(".tab").forEach(function(b){ b.addEventListener("click", function(){ switchTab(this.getAttribute("data-tab")); }); });
+  $("#btn-theme").addEventListener("click", toggleTheme);
+  $("#daily-date").addEventListener("change", function(){ ui.date = this.value || todayStr(); ui.dirty = false; renderDaily(); });
+  $("#btn-today").addEventListener("click", function(){ ui.date = todayStr(); ui.dirty = false; renderDaily(); });
+  $("#btn-refresh").addEventListener("click", function(){
+    QUOTE.ts = 0;
+    ensureQuotes(true).then(function(){
+      renderHoldings(); renderHeader(); toast("行情已刷新");
+      logCommit("quote", "刷新全部行情", state.holdings.length + " 个持仓");
+    })
+      .catch(function(err){ renderHoldings(); toast("刷新失败：" + (err.message||"网络异常"));
+        logCommit("quote", "刷新全部行情失败", err.message || "网络异常"); });
+  });
+  $("#btn-add").addEventListener("click", function(){ openModal(null); });
+  $("#btn-cancel").addEventListener("click", function(){ guardModal("modal", closeModal); });
+  $("#btn-save-holding").addEventListener("click", saveHolding);
+  $("#modal").addEventListener("click", function(e){ if(e.target === this) guardModal("modal", closeModal); });
+  $("#fl-cancel").addEventListener("click", function(){ guardModal("fmodal", closeFlow); });
+  $("#fl-save").addEventListener("click", saveFlow);
+  $("#fmodal").addEventListener("click", function(e){ if(e.target === this) guardModal("fmodal", closeFlow); });
+  $$("#fl-side button").forEach(function(b){
+    b.addEventListener("click", function(){ setFlSide(this.getAttribute("data-side")); });
+  });
+  $("#btn-show-cf").addEventListener("click", function(){ cfView = (cfView === "cf") ? null : "cf"; renderPerf(); });
+  $("#btn-show-inv").addEventListener("click", function(){ cfView = (cfView === "inv") ? null : "inv"; renderPerf(); });
+  $("#t-cancel").addEventListener("click", function(){ guardModal("tmodal", closeTrade); });
+  $("#t-save").addEventListener("click", saveTrade);
+  $("#tmodal").addEventListener("click", function(e){ if(e.target === this) guardModal("tmodal", closeTrade); });
+  $$("#t-side button").forEach(function(b){
+    b.addEventListener("click", function(){ setSide(this.getAttribute("data-side")); updateTradePreview(); });
+  });
+  $("#t-shares").addEventListener("input", updateTradePreview);
+  $("#t-price").addEventListener("input", updateTradePreview);
+  $("#t-fee").addEventListener("input", updateTradePreview);
+  $("#f-code").addEventListener("input", function(){ pickedSec = null; renderPicked(); });
+  $("#f-shares").addEventListener("input", updateCostPreview);
+  $("#f-cost").addEventListener("input", updateCostPreview);
+  bindAcInput($("#f-search"), "holding");
+  bindAcInput($("#t-sec"), "trade");
+
+  document.addEventListener("mousedown", function(e){
+    var t = e.target;
+    if(!(t && t.closest)) return;
+    if(!$("#modal").hidden && !t.closest(".ac-wrap")) hideAc("holding");
+    if(!$("#tmodal").hidden && !t.closest(".ac-wrap")) hideAc("trade");
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){
+      if(!$("#modal").hidden) guardModal("modal", closeModal);
+      if(!$("#tmodal").hidden) guardModal("tmodal", closeTrade);
+      if(!$("#fmodal").hidden) guardModal("fmodal", closeFlow);
+      if(!$("#dmodal").hidden) guardModal("dmodal", closeDiv);
+    }
+    if(e.key === "Enter" && e.target.tagName !== "BUTTON" && e.target.tagName !== "TEXTAREA"){
+      var fEl = $("#f-ac"), tEl = $("#t-ac");
+      if(!$("#fmodal").hidden){ saveFlow(); return; }
+      if(!$("#dmodal").hidden){ saveDiv(); return; }
+      if(!$("#modal").hidden){
+        if(fEl && !fEl.hidden && acResults.length) return;
+        saveHolding();
+      }else if(!$("#tmodal").hidden){
+        if(tEl && !tEl.hidden && acResults.length) return;
+        saveTrade();
+      }
+    }
+  });
+  window.addEventListener("beforeunload", function(e){
+    if(ui.dirty){ e.preventDefault(); e.returnValue = ""; return ""; }
+  });
+
+  $("#btn-export").addEventListener("click", exportJSON);
+  $("#btn-csv").addEventListener("click", exportCSV);
+  $("#btn-tcsv").addEventListener("click", exportTradeCSV);
+  $("#btn-fcsv").addEventListener("click", exportFlowCSV);
+  $("#btn-dcsv").addEventListener("click", exportDivCSV);
+  $("#d-cancel").addEventListener("click", function(){ guardModal("dmodal", closeDiv); });
+  $("#d-save").addEventListener("click", saveDiv);
+  $("#dmodal").addEventListener("click", function(e){ if(e.target === this) guardModal("dmodal", closeDiv); });
+  $$("#d-kind button").forEach(function(b){
+    b.addEventListener("click", function(){ setDivKind(this.getAttribute("data-kind")); });
+  });
+  $$("#d-mode button").forEach(function(b){
+    b.addEventListener("click", function(){ setDivMode(this.getAttribute("data-mode")); });
+  });
+  $("#d-filter").addEventListener("input", renderDivChips);
+  $("#d-value").addEventListener("input", updateDivPreview);
+  $("#btn-bench-fetch").addEventListener("click", function(){
+    ensureBench(true).then(function(list){ toast("已更新 " + benchName(BENCH.secid) + " 行情（" + list.length + " 个交易日）"); })
+      .catch(function(err){ toast("抓取失败：" + (err.message || "网络异常")); });
+  });
+  $("#bench-pick").addEventListener("change", function(){
+    var sid = this.value;
+    if(sid === BENCH.secid) return;
+    BENCH.secid = sid; BENCH.list = []; BENCH.ts = 0; BENCH.err = "";
+    benchSave(); renderBench();
+    logCommit("setting", "切换对比指数", benchName(sid));
+    ensureBench(true).catch(function(err){ toast("抓取失败：" + (err.message || "网络异常")); });
+  });
+  $("#btn-import").addEventListener("click", function(){ $("#file-input").click(); });
+  $("#file-input").addEventListener("change", function(){ if(this.files && this.files[0]) importJSON(this.files[0]); this.value = ""; });
+  $("#opt-autofetch").addEventListener("change", function(){
+    state.settings.autoFetch = this.checked;
+    logAdd("setting", this.checked ? "开启自动抓价" : "关闭自动抓价", "打开「每日记录」时" + (this.checked ? "自动" : "不再自动") + "抓取最新价");
+    save(); toast(this.checked ? "已开启自动抓价" : "已关闭自动抓价");
+  });
+  $("#btn-clear").addEventListener("click", function(){
+    if(!confirm("将删除全部持仓、交易与历史记录，且不可恢复。确认清空？")) return;
+    if(!confirm("再次确认：真的要清空所有数据吗？\n\n当前数据会先自动存一份快照，可撤回。")) return;
+    var oldH = state.holdings.length, oldD = sortedDates().length, oldN = logCount();
+    takeSnapshot("清空数据前");
+    state.holdings = []; state.days = {}; ui.draft = {}; ui.dirty = false; cfView = null; QUOTE.map = {}; QUOTE.ts = 0;
+    state.log = [];
+    logAdd("data", "清空全部数据",
+      "清空前有 " + oldH + " 个持仓 · " + oldD + " 天记录 · " + oldN + " 条日志（可从快照撤回）");
+    save(); toast("已清空"); renderAll();
+  });
+  document.addEventListener("click", function(e){
+    var jump = e.target.getAttribute && e.target.getAttribute("data-jump");
+    if(jump) switchTab(jump);
+  });
+  var rt = null;
+  window.addEventListener("resize", function(){
+    if(ui.tab !== "trend") return;
+    clearTimeout(rt); rt = setTimeout(renderTrend, 150);
+  });
+  bindChartHover();
+  bindBenchHover();
+  bindLogEvents();
+}
+
+/* ==================== 启动 ==================== */
+function init(){
+  initTheme(); benchLoad(); syncLoad();
+  load(); bindEvents();
+  ui.date = todayStr();
+  var bp = $("#bench-pick");
+  if(bp){
+    bp.innerHTML = BENCH_LIST.map(function(b){ return '<option value="'+esc(b.secid)+'">'+esc(b.label)+'</option>'; }).join("");
+    bp.value = BENCH.secid;
+  }
+  switchTab("daily");
+  renderAll();
+  // 恢复「自动备份到文件」的授权句柄
+  fbRestoreFromIDB().then(function(){ renderBackup(); renderSafety(); });
+  // 每天至少留一份基线快照
+  var snaps = snapshots();
+  if((state.holdings.length || sortedDates().length) &&
+     (!snaps.length || (Date.now() - snaps[0].ts) > 86400000)){
+    takeSnapshot("每日自动");
+    renderData();
+  }
+  if(state.settings.autoFetch && state.holdings.some(hasSec)){
+    ensureQuotes().then(function(){ renderAll(); }).catch(function(){ renderAll(); });
+  }
+  if(BENCH.list.length && (Date.now() - BENCH.ts) > 43200000) ensureBench(true).catch(function(){});
+}
+init();
+
+})();
+</script>
+</body>
+</html>
